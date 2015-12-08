@@ -1,0 +1,3 @@
+[submodule "plugins/minify"]
+	path = plugins/minify
+	url = https://github.com/mrclay/minify.git

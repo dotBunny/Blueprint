@@ -17,6 +17,14 @@ define(__NAMESPACE__ ."\GENERATE", 4);
 define(__NAMESPACE__ ."\UPDATE", 5);
 
 
+define(__NAMESPACE__ ."\TAG_END", "-->");
+define(__NAMESPACE__ ."\TAG_START", "<!-- ");
+
+define(__NAMESPACE__ ."\TAG_BLUEPRINT", "BLUEPRINT");
+define(__NAMESPACE__ ."\TAG_TEMPLATE_START", "START");
+define(__NAMESPACE__ ."\TAG_TEMPLATE_END", "END");
+
+
 class Core
 {
     private $canRun = true;
@@ -89,40 +97,6 @@ class Core
                 $this->LoadProject($this->arguments[$i]);
             }
         }
-    }
-
-    static public function RecursiveCopy($source, $dest, $folderPermissions, $filePermissions, $ignoreFiles = null)
-    {
-         // Check for symlinks
-        if (is_link($source)) {
-            return symlink(readlink($source), $dest);
-        }
-
-        // Simple copy for a file
-        if (is_file($source)) {
-            return copy($source, $dest);
-        }
-
-        // Make destination directory
-        if (!is_dir($dest)) {
-            mkdir($dest, $folderPermissions, true);
-        }
-
-        // Loop through the folder
-        $dir = dir($source);
-        while (false !== $entry = $dir->read()) {
-            // Skip pointers
-            if ($entry == '.' || $entry == '..' || in_array($entry, $ignoreFiles)) {
-                continue;
-            }
-
-            // Deep copy directories
-            self::RecursiveCopy("$source/$entry", "$dest/$entry", $folderPermissions, $filePermissions, $ignoreFiles);
-        }
-
-        // Clean up
-        $dir->close();
-        return true;
     }
 
     function GetFiles($directory, $ignoreFiles = null)
@@ -232,50 +206,6 @@ class Core
         }
     }
 
-    public function FindNextTag($tag, $content, $offset = 0)
-    {
-        $firstIndex = strpos($content, "<!-- " . $tag, $offset);
-        $endIndex = strpos($content, " -->", $firstIndex);
-
-        return substr($content, $firstIndex, ($endIndex - $firstIndex) +  4);
-    }
-
-    public function GetTagInfo($tag)
-    {
-        $returnArray = array();
-        $returnArray["baseContent"] = $tag;
-
-        // Clean up tag
-        $returnArray["content"] = trim(str_replace("<!--", "", str_replace("-->", "", $tag)));
-
-        // Determine if its one of ours
-        $chunks = explode(" ", $returnArray["content"]);
-
-        $returnArray["mode"] = strtolower($chunks[0]);
-
-        switch($returnArray["mode"])
-        {
-            case "blueprint":
-            case "template":
-                for($i = 1; $i < count($chunks); $i++) {
-                    $entry = split("=", $chunks[$i]);
-                    $returnArray[strtolower($entry[0])] = str_replace("\"", "", $entry[1]);
-                }
-                $returnArray["valid"] = true;
-                break;
-            default:
-                $returnArray["valid"] = false;
-                break;
-        }
-
-        return $returnArray;
-
-        //<!-- BLUEPRINT TYPE="view" NAME="home" URI="/" OUTPUT="index.html" PARSERS="global" -->
-        //<!-- BLUEPRINT TYPE="template" NAME="footer" PARSERS="global,footer" -->
-        //<!-- TEMPLATE NAME="footer" ACTION="start" -->
-    }
-
-
     private function Generate()
     {
        foreach ($this->projects as $key => $project)
@@ -349,5 +279,77 @@ class Core
             return;
         }
     }
+    public function FindNextTag($tag, &$content, $offset = 0, $remove = false)
+    {
+        $returnArray = array();
+        $returnArray["found"] = 0;
 
+        $returnArray["offset"] = $offset;
+        $returnArray["openingStartIndex"] = strpos($content, TAG_START . $tag, $offset);
+
+
+        $returnArray["openingEndIndex"] = strpos($content, TAG_END, $returnArray["openingStartIndex"]);
+        if ( $returnArray["openingEndIndex"]  != 0 ) {
+            $returnArray["found"] = 1;
+        }
+
+
+        $length = (($returnArray["openingEndIndex"] - $returnArray["openingStartIndex"]) - strlen(TAG_START . $tag));
+
+        $returnArray["tag" ] = trim(substr($content, $returnArray["openingStartIndex"] + strlen(TAG_START . $tag), $length));
+
+        $returnArray["info"] = $this->GetTagInfo($tag, $returnArray["tag"]);
+
+
+
+        if ( $remove && $returnArray["found"] == 1) {
+            $content = substr($content, 0, $returnArray["openingStartIndex"]) . substr($content, $returnArray["openingEndIndex"] + strlen(TAG_END));
+        }
+
+        return $returnArray;
     }
+
+    public function GetTagInfo($mode, $tag)
+    {
+
+        $returnArray = array();
+        $returnArray["baseContent"] = $tag;
+        $returnArray["valid"] = 0;
+
+        // Clean up tag
+        $returnArray["content"] = trim(str_replace(TAG_START, "", str_replace(TAG_END, "", $tag)));
+
+        // Determine if its one of ours
+        $chunks = explode(" ", $returnArray["content"]);
+
+        switch($mode)
+        {
+            case TAG_TEMPLATE_START:
+            case TAG_TEMPLATE_END:
+                if ( !empty(trim($tag))) {
+                    $returnArray["name"] = trim($tag);
+                    $returnArray["valid"] = 1;
+                }
+                break;
+
+            case TAG_BLUEPRINT:
+                for($i = 1; $i < count($chunks); $i++) {
+                    $entry = split("=", $chunks[$i]);
+                    $returnArray[strtolower($entry[0])] = str_replace("\"", "", $entry[1]);
+                }
+
+                if ( !empty($returnArray["type"])) {
+                    $returnArray["valid"] = 1;
+                }
+
+                break;
+        }
+
+        return $returnArray;
+
+        //<!-- BLUEPRINT TYPE="view" NAME="home" URI="/" OUTPUT="index.html" PARSERS="global" -->
+        //<!-- BLUEPRINT TYPE="template" NAME="footer" PARSERS="global,footer" -->
+        //<!-- TEMPLATE NAME="footer" ACTION="start" -->
+    }
+
+ }

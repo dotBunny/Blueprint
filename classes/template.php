@@ -7,45 +7,49 @@ class Template {
     private $project;
 
     protected $path;
-    protected $name;
     protected $parsers;
 
 
     protected $baseContent;
     protected $content;
-    protected $info;
 
 
 
-    public function __construct($project, $path) {
+    public function __construct(&$project, $path) {
         $this->project = $project;
         $this->path = $path;
-        if ( file_exists($this->path) ) {
-            $this->baseContent = file_get_contents($this->path);
-            $this->content = $this->baseContent;
-        }
+        if ( !file_exists($this->path) ) { return; }
+
+        $this->baseContent = file_get_contents($this->path);
+        $this->content = trim($this->baseContent);
 
         // Read and process first line (template definition)
-        $tag = $this->project->blueprint->FindNextTag("BLUEPRINT", $this->content, 0);
-        $header = $this->project->blueprint->GetTagInfo($tag);
-        if ( $this->project->GetRemoveTags()) {
-            $this->content = trim(str_replace($tag, "", $this->content));
-        }
+        $header = $this->project->blueprint->FindNextTag(TAG_BLUEPRINT, $this->content, 0,  $this->project->GetRemoveTags());
 
-        $this->name = $header["name"];
-        $this->parsers = explode(",", $header["parsers"]);
-    }
-
-    public function Process()
-    {
-        foreach($this->project->GetParsers() as $names => $parser)
+        if ($header["info"]["valid"] == 1)
         {
-
-            $this->content = $parser->Process($this->content);
+            $this->parsers = explode(",", $header["info"]["parsers"]);
         }
     }
 
+    public function GetTemplate()
+    {
+        $returnContent = $this->content;
 
+        // Get other templates ?
+
+
+        // Run Parser
+/*
+        if ( !is_null($this->parsers) && count($this->parsers) > 0 ) {
+
+	        foreach($this->parsers as $name) {
+		        $returnContent = $this->project->GetParsers()[$name]->Process($returnContent);
+	        }
+        }
+*/
+        return $returnContent;
+    }
 
         /**
          * Sets a value for replacing a specific tag.

@@ -11,6 +11,7 @@ class Tests extends Blueprint\Project {
 
     public function Initialize()
     {
+
         // Set the projects name internally
         $this->SetName("Tests Framework");
 
@@ -20,13 +21,12 @@ class Tests extends Blueprint\Project {
         // Turn off compression on JS/CSS files
         $this->SetGlobalCompression(false);
 
-        // Copy over the contents of the resources folder to the output folder
-        $this->SetCopyResources(true);
-
         // Add some files / folders to ignore entirely
         $this->AddIgnore(".DS_Store");
         $this->AddIgnore(".git");
         $this->AddIgnore(".svn");
+
+        parent::Initialize();
     }
 
     public function Generate()

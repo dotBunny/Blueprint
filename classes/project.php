@@ -4,16 +4,16 @@ namespace Blueprint;
 
 abstract class Project
 {
+
     private $name;
 
     private $outputPath;
-    private $viewPath;
+    private $sitePath;
     private $parserPath;
     private $templatePath;
 
     private $workingDirectory;
     private $compression = true;
-    private $copyResources = true;
     private $removeTags = true;
 
     private $directoryPermission = 0777;
@@ -23,7 +23,7 @@ abstract class Project
 
 
     protected $views = array();
-    protected $templates = array();
+    public $templates = array();
     protected $parsers = array();
 
     public $blueprint;
@@ -42,62 +42,21 @@ abstract class Project
     protected $siteLayout = array();
 
 
-    // Force Extending class to define this method
-    abstract protected function Initialize();
-
-    public function __construct($blueprintInstance, $workingDirectory) {
+    public function __construct(&$blueprintInstance, $workingDirectory) {
         $this->blueprint = $blueprintInstance;
         $this->workingDirectory = $workingDirectory;
 
         $this->SetName("Default Project");
 
         $this->SetOutputPath("default");
-        $this->SetViewPath("views");
+
+        $this->SetSitePath("site");
         $this->SetTemplatePath("templates");
         $this->SetParserPath("parsers");
     }
 
-    public function Generate()
+    public function Initialize()
     {
-        $this->blueprint->Output(\Blueprint\MESSAGE, "Generating " . $this->name);
-
-
-        // Remove old output folder
-        if(is_dir($this->GetOutputPath()))
-        {
-            if ( !$this->blueprint->RemoveDirectory($this->GetOutputPath()) ) {
-                $this->blueprint->Output(\Blueprint\ERROR, "There was an issue cleaning the output folder for \"" . $this->name . "\"");
-                return;
-            }
-        }
-
-        // Create new output folder
-        if (!mkdir($this->GetOutputPath(), $this->GetDirectoryPermission(), true)) {
-            $this->blueprint->Output(\Blueprint\ERROR, "Unable to create output folder for \"" . $this->name . "\" @ " . $this->GetOutputPath());
-            return;
-        }
-
-        // Should we copy resources
-        if ( $this->GetCopyResources() ) {
-
-                $this->blueprint->RecursiveCopy(
-                    $this->blueprint->BuildPath($this->workingDirectory, "resources"),
-                    $this->GetOutputPath(),
-                    $this->GetDirectoryPermission(),
-                    $this->GetFilePermission(),
-                    $this->GetIgnoreFiles());
-        }
-
-        // TODO: Handle rename of resources
-
-        // Find All Views
-        $viewsFiles = $this->blueprint->GetFiles($this->GetViewPath(), $this->GetIgnoreFiles());
-        foreach($viewsFiles as $path)
-        {
-            $this->views[] = new \Blueprint\View($this, $path);
-        }
-        $this->blueprint->Output(\Blueprint\INFO, count($this->views) . " Views Found.");
-
         // Find All Templates
         $templateFiles = $this->blueprint->GetFiles($this->GetTemplatePath(), $this->GetIgnoreFiles());
         foreach($templateFiles as $path)
@@ -121,12 +80,45 @@ abstract class Project
             // Create parser object
             eval("\$this->parsers[" . $className . "] = new \\" . ucfirst($className) . "(\$this);");
         }
+    }
 
-        // Process All Templates
-        foreach($this->templates as $key => $template)
+    public function Generate()
+    {
+        $this->blueprint->Output(\Blueprint\MESSAGE, "Generating " . $this->name);
+
+        // Remove old output folder
+        if(is_dir($this->GetOutputPath()))
         {
-            $template->Process();
+            if ( !$this->blueprint->RemoveDirectory($this->GetOutputPath()) ) {
+                $this->blueprint->Output(\Blueprint\ERROR, "There was an issue cleaning the output folder for \"" . $this->name . "\"");
+                return;
+            }
         }
+
+        // Create new output folder
+        if (!mkdir($this->GetOutputPath(), $this->GetDirectoryPermission(), true)) {
+            $this->blueprint->Output(\Blueprint\ERROR, "Unable to create output folder for \"" . $this->name . "\" @ " . $this->GetOutputPath());
+            return;
+        }
+
+        // Clear out views before the copy happens (which finds them)
+        $this->views = array();
+        $this->CopySite(
+                 $this->sitePath,
+                    $this->outputPath,
+                    $this->GetDirectoryPermission(),
+                    $this->GetFilePermission(),
+                    $this->GetIgnoreFiles());
+
+
+        // Find All Views
+        //$viewsFiles = $this->blueprint->GetFiles($this->GetViewPath(), $this->GetIgnoreFiles());
+        //foreach($viewsFiles as $path)
+        //{
+        //    $this->views[] = new \Blueprint\View($this, $path);
+        //}
+        $this->blueprint->Output(\Blueprint\INFO, count($this->views) . " Views Found.");
+
 
         // Process All Views
         foreach($this->views as $key => $view)
@@ -144,6 +136,54 @@ abstract class Project
 
 
 
+    private function CopySite($source, $dest, $folderPermissions, $filePermissions, $ignoreFiles = null)
+    {
+         // Check for symlinks
+        if (is_link($source)) {
+            // No support for symlinks
+            return true;
+//            return symlink(readlink($source), $dest);
+        }
+
+        // If it truly is a file
+        if (is_file($source))
+        {
+            // Check file is a Blueprint, ignore if it is and add it to the views, else copy it.
+            $check = strpos(file_get_contents($source), \Blueprint\TAG_START . \Blueprint\TAG_BLUEPRINT);
+
+            if ($check !== false)
+            {
+                $this->views[] = new \Blueprint\View($this, $source);
+                return true;
+            }
+
+            return copy($source, $dest);
+        }
+
+        // Make destination directory
+        if (!is_dir($dest)) {
+            mkdir($dest, $folderPermissions, true);
+        }
+
+        // Loop through the folder
+        $dir = dir($source);
+        while (false !== $entry = $dir->read()) {
+            // Skip pointers
+            if ($entry == '.' || $entry == '..' || in_array($entry, $ignoreFiles)) {
+                continue;
+            }
+
+            // Deep copy directories
+            $this->CopySite("$source/$entry", "$dest/$entry", $folderPermissions, $filePermissions, $ignoreFiles);
+        }
+
+        // Clean up
+        $dir->close();
+        return true;
+    }
+
+
+
 
 
 
@@ -151,6 +191,7 @@ abstract class Project
     {
         $this->copyResources = $should;
     }
+
     public function GetCopyResources()
     {
         if ( is_dir($this->blueprint->BuildPath($this->workingDirectory, "resources"))) {
@@ -168,6 +209,8 @@ abstract class Project
     {
         return $this->compression;
     }
+
+
 
     protected function SetName($name)
     {
@@ -245,19 +288,19 @@ abstract class Project
         }
     }
 
-    protected function SetViewPath($path) {
+    protected function SetSitePath($path) {
         if ( $this->blueprint->IsAbsolutePath($path) )
         {
-            $this->viewPath = $path;
+            $this->sitePath = $path;
         }
         else
         {
-            $this->viewPath = $this->blueprint->BuildPath($this->workingDirectory, $path);
+            $this->sitePath = $this->blueprint->BuildPath($this->workingDirectory, $path);
         }
     }
-    public function GetViewPath()
+    public function GetSitePath()
     {
-        return $this->viewPath;
+        return $this->sitePath;
     }
     public function GetParserPath()
     {
@@ -291,9 +334,5 @@ abstract class Project
             return false;
         }
         return true;
-    }
-    public function ShouldRenameFolder($relativePath)
-    {
-
     }
 }

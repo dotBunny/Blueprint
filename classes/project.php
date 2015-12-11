@@ -4,78 +4,90 @@ namespace Blueprint;
 
 abstract class Project
 {
+    public $blueprint;
+    public $templates = array();
 
-    private $name;
+    protected $views = array();
+    protected $parsers = array();
 
-    private $outputPath;
-    private $sitePath;
-    private $parserPath;
-    private $templatePath;
+    private $keyValues = array();
 
-    private $workingDirectory;
+
+
     private $compression = true;
     private $removeTags = true;
 
     private $directoryPermission = 0777;
     private $filePermission = 0666;
 
-    private $ignoreFiles = array();
+    private $ignoreFiles = array(".DS_Store", ".git", ".svn");
 
+    public function __construct($rootDirectory, $workingDirectory) {
 
-    protected $views = array();
-    public $templates = array();
-    protected $parsers = array();
-
-    public $blueprint;
-
-    protected $ignoreCompression = array(
-        "*.min.*"
-    );
-
-    protected $renameFolders = array(
-        "images" => "img",
-        "javascript" => "js"
-    );
-
-
-
-    protected $siteLayout = array();
-
-
-    public function __construct(&$blueprintInstance, $workingDirectory) {
-        $this->blueprint = $blueprintInstance;
-        $this->workingDirectory = $workingDirectory;
-
-        $this->SetName("Default Project");
-
-        $this->SetOutputPath("default");
-
-        $this->SetSitePath("site");
-        $this->SetTemplatePath("templates");
-        $this->SetParserPath("parsers");
+        // Set all our defaults up in the house in the fancy KeyValue store
+        $this->WorkingDirectory= $workingDirectory;
+        $this->RootDirectory = $rootDirectory;
+        $this->Name = "Default Project";
+        $this->OutputPath = "output";
+        $this->SitePath= "site";
+        $this->TemplatePath = "templates";
+        $this->ParsersPath = "parsers";
     }
+
+    public function __get($name)
+    {
+        return $this->keyValues[$name];;
+    }
+
+    public function __set($key, $value)
+    {
+        switch($key)
+        {
+            case "OutputPath":
+            case "SitePath":
+            case "ParsersPath":
+            case "TemplatePath":
+                if ( Core::IsAbsolutePath($value) )
+                {
+                    $this->keyValues[$key] = $path;
+                }
+                else
+                {
+                    $this->keyValues[$key] = Core::BuildPath($this->WorkingDirectory, $value);
+                }
+                break;
+            default:
+                $this->keyValues[$key] = $value;
+                break;
+        }
+    }
+
+
+
 
     public function Initialize()
     {
         // Find All Templates
-        $templateFiles = $this->blueprint->GetFiles($this->GetTemplatePath(), $this->GetIgnoreFiles());
+        $templateFiles = Core::GetFiles($this->TemplatePath, $this->getIgnoreFiles());
+        Core::Output(INFO, "Searching " . $this->TemplatePath . " for Templates ...");
         foreach($templateFiles as $path)
         {
             $file = end(explode(DIRECTORY_SEPARATOR, $path));
             $fileChunked = explode(".", $file);
 
-            $this->templates[$fileChunked[0]] = new \Blueprint\Template($this, $path);
+            $this->templates[strtolower($fileChunked[0])] = new Template($this, $path);
         }
-        $this->blueprint->Output(\Blueprint\INFO, count($this->templates) . " Templates Found.");
+        Core::Output(INFO, count($this->templates) . " Templates Found.");
 
         // Find All Parsers
-        $parserFiles = $this->blueprint->GetFiles($this->GetParserPath(), $this->GetIgnoreFiles());
+        $parserFiles =  Core::GetFiles($this->ParsersPath, $this->getIgnoreFiles());
         foreach($parserFiles as $path)
         {
+            Core::Output(INFO, "Including " . $path);
             require_once($path);
 
             // Determine class name (upper case first character of the file name)
-            $className = str_replace(".php", "", end(explode(DIRECTORY_SEPARATOR, $path)));
+            $className = strtolower(str_replace(".php", "", end(explode(DIRECTORY_SEPARATOR, $path))));
 
             // Create parser object
             eval("\$this->parsers[" . $className . "] = new \\" . ucfirst($className) . "(\$this);");
@@ -84,41 +96,35 @@ abstract class Project
 
     public function Generate()
     {
-        $this->blueprint->Output(\Blueprint\MESSAGE, "Generating " . $this->name);
+        Core::Output(MESSAGE, "Generating " . $this->name);
 
         // Remove old output folder
-        if(is_dir($this->GetOutputPath()))
+        if(is_dir($this->OutputPath))
         {
-            if ( !$this->blueprint->RemoveDirectory($this->GetOutputPath()) ) {
-                $this->blueprint->Output(\Blueprint\ERROR, "There was an issue cleaning the output folder for \"" . $this->name . "\"");
+            if ( !Core::RemoveDirectory($this->OutputPath) ) {
+                Core::Output(ERROR, "There was an issue cleaning the output folder for \"" . $this->Name . "\"");
                 return;
             }
         }
 
         // Create new output folder
-        if (!mkdir($this->GetOutputPath(), $this->GetDirectoryPermission(), true)) {
-            $this->blueprint->Output(\Blueprint\ERROR, "Unable to create output folder for \"" . $this->name . "\" @ " . $this->GetOutputPath());
+        if (!mkdir($this->OutputPath, $this->getDirectoryPermission(), true)) {
+            Core::Output(ERROR, "Unable to create output folder for \"" . $this->Name . "\" @ " . $this->OutputPath);
             return;
         }
 
         // Clear out views before the copy happens (which finds them)
         $this->views = array();
-        $this->CopySite(
-                 $this->sitePath,
-                    $this->outputPath,
-                    $this->GetDirectoryPermission(),
-                    $this->GetFilePermission(),
-                    $this->GetIgnoreFiles());
-
 
         // Find All Views
-        //$viewsFiles = $this->blueprint->GetFiles($this->GetViewPath(), $this->GetIgnoreFiles());
-        //foreach($viewsFiles as $path)
-        //{
-        //    $this->views[] = new \Blueprint\View($this, $path);
-        //}
-        $this->blueprint->Output(\Blueprint\INFO, count($this->views) . " Views Found.");
+        $this->ProcessSiteFolder(
+                $this->SitePath,
+                $this->OutputPath,
+                $this->getDirectoryPermission(),
+                $this->getFilePermission(),
+                $this->getIgnoreFiles());
 
+        Core::Output(INFO, count($this->views) . " Views Found.");
 
         // Process All Views
         foreach($this->views as $key => $view)
@@ -133,10 +139,7 @@ abstract class Project
         }
     }
 
-
-
-
-    private function CopySite($source, $dest, $folderPermissions, $filePermissions, $ignoreFiles = null)
+    private function ProcessSiteFolder($source, $dest, $folderPermissions, $filePermissions, $ignoreFiles = null)
     {
          // Check for symlinks
         if (is_link($source)) {
@@ -149,11 +152,11 @@ abstract class Project
         if (is_file($source))
         {
             // Check file is a Blueprint, ignore if it is and add it to the views, else copy it.
-            $check = strpos(file_get_contents($source), \Blueprint\TAG_START . \Blueprint\TAG_BLUEPRINT);
+            $check = strpos(file_get_contents($source), TAG_START . TAG_BLUEPRINT);
 
             if ($check !== false)
             {
-                $this->views[] = new \Blueprint\View($this, $source);
+                $this->views[] = new View($this, $source);
                 return true;
             }
 
@@ -174,7 +177,7 @@ abstract class Project
             }
 
             // Deep copy directories
-            $this->CopySite("$source/$entry", "$dest/$entry", $folderPermissions, $filePermissions, $ignoreFiles);
+            $this->ProcessSiteFolder("$source/$entry", "$dest/$entry", $folderPermissions, $filePermissions, $ignoreFiles);
         }
 
         // Clean up
@@ -187,144 +190,76 @@ abstract class Project
 
 
 
-    protected function SetCopyResources($should)
+
+
+
+    public function GetParser($key)
     {
-        $this->copyResources = $should;
+        return $this->parsers[$key];
     }
 
-    public function GetCopyResources()
-    {
-        if ( is_dir($this->blueprint->BuildPath($this->workingDirectory, "resources"))) {
-            return $this->copyResources;
-        } else {
-            return false;
-        }
 
-    }
-    protected function SetGlobalCompression($should)
+
+
+    public function setGlobalCompression($should)
     {
         $this->compression = $should;
     }
-    public function GetGlobalCompression()
+    public function getGlobalCompression()
     {
         return $this->compression;
     }
 
 
 
-    protected function SetName($name)
-    {
-        $this->name = $name;
-    }
-    public function GetName()
-    {
-        return $this->name;
-    }
-    public function GetParsers()
+
+
+
+
+
+    public function getParsers()
     {
         return $this->parsers;
     }
-    public function GetParser($key)
-    {
-        return $this->parsers[$key];
-    }
-
-    public function GetRemoveTags()
+    public function getRemoveTags()
     {
         return $this->removeTags;
     }
-    public function SetRemoveTags($value)
+    public function setRemoveTags($value)
     {
         $this->removeTags = $value;
     }
 
-    public function GetFilePermission()
+    public function getFilePermission()
     {
         return $this->filePermission;
     }
-    public function SetFilePermission($permission)
+    public function setFilePermission($permission)
     {
         $this->filePermission = $permission;
     }
-    public function GetDirectoryPermission()
+    public function getDirectoryPermission()
     {
         return $this->directoryPermission;
     }
-    public function SetDirectoryPermission($permission)
+    public function setDirectoryPermission($permission)
     {
         $this->directoryPermission = $permission;
     }
-    protected function SetOutputPath($path) {
 
-        if ( $this->blueprint->IsAbsolutePath($path) )
-        {
-            $this->outputPath = $path;
-        }
-        else
-        {
-            $this->outputPath = $this->blueprint->BuildPath($this->blueprint->GetRootDirectory(), "output", $path);
-        }
-    }
-    protected function SetTemplatePath($path) {
-
-        if ( $this->blueprint->IsAbsolutePath($path) )
-        {
-            $this->templatePath = $path;
-        }
-        else
-        {
-            $this->templatePath = $this->blueprint->BuildPath($this->workingDirectory, $path);
-        }
-    }
-    protected function SetParserPath($path) {
-
-        if ( $this->blueprint->IsAbsolutePath($path) )
-        {
-            $this->parserPath = $path;
-        }
-        else
-        {
-            $this->parserPath = $this->blueprint->BuildPath($this->workingDirectory, $path);
-        }
-    }
-
-    protected function SetSitePath($path) {
-        if ( $this->blueprint->IsAbsolutePath($path) )
-        {
-            $this->sitePath = $path;
-        }
-        else
-        {
-            $this->sitePath = $this->blueprint->BuildPath($this->workingDirectory, $path);
-        }
-    }
-    public function GetSitePath()
+    public function getIgnoreFiles()
     {
-        return $this->sitePath;
-    }
-    public function GetParserPath()
-    {
-        return $this->parserPath;
-    }
-    public function GetOutputPath()
-    {
-        return $this->outputPath;
+        return $this->ignoreFiles;
     }
 
-    public function GetTemplatePath()
-    {
-        return $this->templatePath;
-    }
+
+
 
     public function AddIgnore($filename)
     {
         if ( !in_array($filename, $this->ignoreFiles) ) {
             $this->ignoreFiles[] = $filename;
         }
-    }
-    public function GetIgnoreFiles()
-    {
-        return $this->ignoreFiles;
     }
 
     public function ShouldCompress($relativePath)
@@ -336,3 +271,5 @@ abstract class Project
         return true;
     }
 }
+
+class DefaultProject extends Project { }

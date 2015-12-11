@@ -1,6 +1,5 @@
 <?php
 
-
 function __autoload($class) {
 
     // Don't allow for double initialization
@@ -18,6 +17,6 @@ function __autoload($class) {
 }
 
 // Initialize Blueprint with passed Arguements
-$bp = new Blueprint\Core($argv);
+$BP = new Blueprint\Core($argv);
 
-$bp->Run();
+$BP->Run();

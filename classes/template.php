@@ -4,15 +4,12 @@ namespace Blueprint;
 
 class Template {
 
-    private $project;
-
+    protected $project;
     protected $path;
     protected $parsers;
-
-
     protected $baseContent;
     protected $content;
-
+    protected $header;
 
 
     public function __construct(&$project, $path) {
@@ -24,32 +21,112 @@ class Template {
         $this->content = trim($this->baseContent);
 
         // Read and process first line (template definition)
-        $header = $this->project->blueprint->FindNextTag(TAG_BLUEPRINT, $this->content, 0,  $this->project->GetRemoveTags());
 
-        if ($header["info"]["valid"] == 1)
+        $this->header = Tag::FindNext(TAG_BLUEPRINT, $this->content, 0);
+
+        if ($this->header != null && $this->header->IsValid())
         {
-            $this->parsers = explode(",", $header["info"]["parsers"]);
+            $this->parsers = $this->header->getValues();
         }
     }
 
-    public function GetTemplate()
+
+    public function Process()
     {
-        $returnContent = $this->content;
+        // Get a fresh copy of the template
+	    $this->content = $this->baseContent;
 
-        // Get other templates ?
+	    // We have to find/remove the header tag
+        $this->header = Tag::FindNext(TAG_BLUEPRINT, $this->content, 0);
 
 
-        // Run Parser
+        if ($this->header != null && $this->header->IsValid())
+        {
+            // Set position to be at the end of the header tag
+            $position = $this->header->getEndPosition;
+
+            // If we are removing the header tag were going to need to update that position
+            if ( $this->project->getRemoveTags() ) {
+                    $this->content = Tag::Remove($this->header, $this->content);
+                    $position = 0;
+            }
+        } else {
+
+            // No header, start from beginning?
+            $position = 0;
+        }
+
+		// Template In Template
+        while ($position < strlen($this->content)) {
+	        // Search through for all templates and and replace contents with parent template, ignoring anything in there that is a template
+			// There should be no nested templates at this stage
+			$start = Tag::FindNext(TAG_TEMPLATE_START, $this->content, $position);
+			if ( $start == null || !$start->IsValid() ) {
+    			$position = strlen($this->content);
+                break;
+			}
+
+            // Check the end
+            $end = Tag::FindNext(TAG_TEMPLATE_END, $this->content, $start->getEndPosition());
+			// No more tags found
+			if ( $end == null || !$end->IsValid() ) {
+				$position = strlen($this->content);
+				break;
+			}
+
 /*
+            if (!array_key_exists($start->getPrimaryValue(), $this->project->templates)) {
+                $position = $start->getEndPosition();
+                continue;
+            }
+*/
+
+            if ( !empty($start->getPrimaryValue())){
+
+    			if($this->project->getRemoveTags())
+    			{
+    				$this->content =
+    					substr($this->content, 0, $start->getStartPosition()) .
+    					$this->project->templates[$start->getPrimaryValue()]->Process() .
+    					substr($this->content, $end->getEndPosition());
+
+    					$position = $end->getEndPosition();
+    			} else {
+
+    				$template = $this->project->templates[$start->getPrimaryValue()]->GetTemplate();
+
+    				$this->content =
+    					substr($this->content, 0, $start->getEndPosition()) .
+    					$this->project->templates[$start->getPrimaryValue()]->Process() .
+    					substr($this->content, $end->getStartPosition() - 1);
+
+    				$position = $end->getEndPosition() + strlen($template);
+
+    			}
+			} else {
+                $position = $start->getEndPosition();
+			}
+		}
+
+
+        // Run Parsers
         if ( !is_null($this->parsers) && count($this->parsers) > 0 ) {
 
 	        foreach($this->parsers as $name) {
-		        $returnContent = $this->project->GetParsers()[$name]->Process($returnContent);
+		       Core::Output(INFO, "Processing " . $this->path . " with " . $name);
+		       $this->content = $this->project->GetParser($name)->Process($this->content);
 	        }
         }
-*/
-        return $returnContent;
+
+        return $this->content;
     }
+
+    public function getContent()
+    {
+        return $this->content;
+    }
+
+
 
         /**
          * Sets a value for replacing a specific tag.

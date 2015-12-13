@@ -35,15 +35,37 @@ class View extends Template
         }
         $buildPath = Core::BuildPath($folder, $this->output);
 
+        // Time to cleanup line endings (http://stackoverflow.com/questions/18376167/convert-ending-line-of-a-file-with-a-php-script)
+        //Replace all the CRLF ending-lines by something uncommon
+        $DontReplaceThisString = "\r\n";
+        $specialString = "!£#!Dont_wanna_replace_that!#£!";
+
+        $this->content = str_replace($DontReplaceThisString, $specialString, $this->content);
+
+        //Convert the CR ending-lines into CRLF ones
+        $this->content = str_replace("\r", "\r\n", $this->content);
+
+        //Replace all the CRLF ending-lines by something uncommon
+        $this->content = str_replace($DontReplaceThisString, $specialString, $this->content);
+
+        //Convert the LF ending-lines into CRLF ones
+        $this->content = str_replace("\n", "\r\n", $this->content);
+
+        //Restore the CRLF ending-lines
+        $this->content = str_replace($specialString, $DontReplaceThisString, $this->content);
+
         file_put_contents($buildPath, $this->content);
 
         // Read back file into an array
         $fileArray = file($buildPath);
 
+        // Remove any empty lines
         foreach( $fileArray as $key => $value )
         {
             if( empty(trim($value)) ) unset($fileArray[$key]);
         }
+
+        // Final write of file
         file_put_contents($buildPath, $fileArray);
     }
 

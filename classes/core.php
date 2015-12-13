@@ -18,8 +18,6 @@ define(__NAMESPACE__ ."\UPDATE", 5);
 
 class Core
 {
-
-
     public static $ErrorCount = 0;
     public static $WarningCount = 0;
     public static $CanRun = true;
@@ -27,6 +25,7 @@ class Core
 
     private $arguments = array();
     private $projects = array();
+
     private $rootDirectory;
 
     private $mode = GENERATE;
@@ -81,11 +80,13 @@ class Core
             // Load Classes
             $this->LoadClasses();
 
+            $this->LoadParsers();
+
             // Load Projects
             Core::Output(MESSAGE, "Loading Projects ...");
             for($i = 2; $i < count($this->arguments); $i++)
             {
-                $this->LoadProject($this->arguments[$i]);
+                $this->LoadProject(realpath($this->arguments[$i]));
             }
         }
     }
@@ -214,7 +215,6 @@ class Core
         }
     }
 
-
     private function Generate()
     {
        foreach ($this->projects as $key => $project)
@@ -241,6 +241,15 @@ class Core
         require_once(Core::BuildPath($this->rootDirectory, "classes", "view.php"));
         require_once(Core::BuildPath($this->rootDirectory, "classes", "parser.php"));
     }
+
+    private function LoadParsers()
+    {
+        Core::Output(MESSAGE, "Loading Default Parsers ...");
+
+        // Include abstract project class
+        require_once(Core::BuildPath($this->rootDirectory, "parsers", "replace.php"));
+    }
+
 
 
     private function LoadProject($path)
@@ -285,7 +294,11 @@ class Core
         }
         // Initialize object
         $this->projects[$projectName]->Initialize();
+
+        // Post initialize options
+        $this->projects[$projectName]->PostInitialize();
     }
+
 
 
     private function Update()

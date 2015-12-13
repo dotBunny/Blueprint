@@ -12,8 +12,5 @@ class Tests extends Blueprint\Project {
 
         // Add some files / folders to ignore entirely
         $this->AddIgnore(".ignore");
-
-        // Execute our base logic (finding all the templates and parsers)
-        parent::Initialize();
     }
 }

@@ -5,10 +5,15 @@ namespace Blueprint;
 abstract class Parser
 {
     private $project;
-    protected $name;
 
     public function __construct(&$project) {
         $this->project = $project;
+        $this->Initialize();
+    }
+
+    public function Initialize()
+    {
+
     }
 
     public function Process($content)

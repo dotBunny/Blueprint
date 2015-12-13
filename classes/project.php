@@ -4,7 +4,6 @@ namespace Blueprint;
 
 abstract class Project
 {
-    public $blueprint;
     public $templates = array();
 
     protected $views = array();
@@ -63,9 +62,12 @@ abstract class Project
     }
 
 
-
-
     public function Initialize()
+    {
+
+    }
+
+    public function PostInitialize()
     {
         // Find All Templates
         $templateFiles = Core::GetFiles($this->TemplatePath, $this->getIgnoreFiles());
@@ -78,6 +80,7 @@ abstract class Project
             $this->templates[strtolower($fileChunked[0])] = new Template($this, $path);
         }
         Core::Output(INFO, count($this->templates) . " Templates Found.");
+
 
         // Find All Parsers
         $parserFiles =  Core::GetFiles($this->ParsersPath, $this->getIgnoreFiles());
@@ -92,6 +95,11 @@ abstract class Project
             // Create parser object
             eval("\$this->parsers[" . $className . "] = new \\" . ucfirst($className) . "(\$this);");
         }
+
+        // Load a default replacer
+        $this->parsers["SystemReplacer"] = new Replace($this);
+        $this->parsers["SystemReplacer"]->Set("BLUEPRINT_GENERATOR", NAME . " " . REVISION);
+
     }
 
     public function Generate()

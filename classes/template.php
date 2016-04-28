@@ -26,7 +26,9 @@ class Template {
 
         if ($this->header != null && $this->header->IsValid())
         {
-            $this->parsers = $this->header->getValues();
+            //TOOD CHANGE THIS TO MAKING IT GET the parse array entry
+
+            $this->parsers = $this->header->parsers;
         }
     }
 
@@ -108,13 +110,17 @@ class Template {
 			}
 		}
 
-
         // Run Parsers
         if ( !is_null($this->parsers) && count($this->parsers) > 0 ) {
 
-	        foreach($this->parsers as $name) {
-		       Core::Output(INFO, "Processing " . $this->path . " with " . $name);
-		       $this->content = $this->project->GetParser($name)->Process($this->content);
+            if (is_array($this->parsers)) {
+    	        foreach($this->parsers as $name) {
+    		       Core::Output(INFO, "Processing " . $this->path . " with " . $name);
+    		       $this->content = $this->project->GetParser($name)->Process($this->content);
+    	        }
+	        } else {
+    	         Core::Output(INFO, "Processing " . $this->path . " with " . $this->parsers);
+                 $this->content = $this->project->GetParser($this->parsers)->Process($this->content);
 	        }
         }
 

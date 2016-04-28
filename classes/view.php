@@ -29,11 +29,39 @@ class View extends Template
 
     public function Generate()
     {
+
+        Core::Output(INFO, "GENERATE!");
+        print_r($this->header);
+
+
+
+        if ( $this->header->destination != null) {
+                 //  print("||" . $this->header->destination . "$$\n\r");
+
+                    // Take relative add destination
+            Core::Output(INFO, "Using Custom Destination " . $this->header->destination . " with " . $this->name);
+
+
+        } else {
+            Core::Output(INFO, "Using Default Destination Destination for " . $this->name);
+        }
+
+
+        //die();
         $folder = $this->project->OutputPath;/// . str_replace("/", DIRECTORY_SEPARATOR, $this->uri);
         if ( !is_dir($folder)) {
             mkdir($folder, $this->project->getDirectoryPermission(), true);
         }
-        $buildPath = Core::BuildPath($folder, $this->output);
+
+         $buildPath = Core::BuildPath($folder, $this->output);
+        if ( $this->header->destination != null )
+        {
+            $buildPath = Core::BuildPath($folder, $this->header->destination);
+            if ( !is_dir(dirname($buildPath) )) {
+                mkdir(dirname($buildPath), $this->project->getDirectoryPermission(), true);
+            }
+        }
+
 
         // Time to cleanup line endings (http://stackoverflow.com/questions/18376167/convert-ending-line-of-a-file-with-a-php-script)
         //Replace all the CRLF ending-lines by something uncommon

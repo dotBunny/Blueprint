@@ -34,9 +34,25 @@ class Tag
         unset($exploded[0]);
 
         $this->values = $exploded;
+
+
         foreach($this->values as $key => $value) {
             $split = explode("=", $value);
-            $this->keyValues[trim($split[0])] = trim($split[1]);
+
+
+            if ( strpos($split[1],',') > 0 ) {
+
+                $newValues = explode(",", str_replace("\"", "", $split[1]));
+                for($i = 0; $i < count($newValues); $i++)
+                {
+                    $newValues[$i] = trim($newValues[$i]);
+                }
+                $this->keyValues[trim($split[0])] = $newValues;
+            } else {
+                $this->keyValues[trim($split[0])] = trim(str_replace("\"", "", $split[1]));
+            }
+
+
         }
 
         switch($this->keyword) {
@@ -52,6 +68,16 @@ class Tag
 
         return $this;
 	}
+
+    public function __get($name)
+    {
+        return $this->keyValues[$name];;
+    }
+
+    public function __set($key, $value)
+    {
+        $this->keyValues[$key] = value;
+    }
 
 	public static function FindNext($tag, $content, $offset = 0)
 	{

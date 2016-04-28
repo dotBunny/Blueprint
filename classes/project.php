@@ -7,6 +7,8 @@ abstract class Project
     public $templates = array();
 
     protected $views = array();
+    private $currentView;
+
     protected $parsers = array();
 
     private $keyValues = array();
@@ -61,7 +63,10 @@ abstract class Project
         }
     }
 
-
+    public function GetCurrentView()
+    {
+        return $this->currentView;
+    }
     public function Initialize()
     {
 
@@ -137,6 +142,7 @@ abstract class Project
         // Process All Views
         foreach($this->views as $key => $view)
         {
+            $currentView = $key;
             $view->Process();
         }
 

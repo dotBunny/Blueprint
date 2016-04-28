@@ -4,7 +4,7 @@ namespace Blueprint;
 
 abstract class Parser
 {
-    private $project;
+    protected $project;
 
     public function __construct(&$project) {
         $this->project = $project;

@@ -37,8 +37,6 @@ class View extends Template
             Core::Output(INFO, "Using Default Destination Destination for " . $this->name);
         }
 
-
-
         $folder = $this->project->OutputPath;
         if ( !is_dir($folder)) {
             mkdir($folder, $this->project->getDirectoryPermission(), true);
@@ -52,7 +50,6 @@ class View extends Template
                 mkdir(dirname($buildPath), $this->project->getDirectoryPermission(), true);
             }
         }
-
 
         // Time to cleanup line endings (http://stackoverflow.com/questions/18376167/convert-ending-line-of-a-file-with-a-php-script)
         //Replace all the CRLF ending-lines by something uncommon

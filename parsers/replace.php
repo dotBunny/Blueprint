@@ -21,6 +21,11 @@ class Replace extends Parser {
         $this->keyValues[$key] = $value;
     }
 
+    public function Get($key)
+    {
+        return $this->keyValues[$key];
+    }
+
     public function SetStart($opener)
     {
         $this->startTag = $opener;

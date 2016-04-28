@@ -7,6 +7,7 @@ abstract class Project
     public $templates = array();
 
     protected $views = array();
+    private $currentViewKey;
     private $currentView;
 
     protected $parsers = array();
@@ -63,10 +64,16 @@ abstract class Project
         }
     }
 
+    public function GetCurrentViewKey()
+    {
+        return $this->currentViewKey;
+    }
+
     public function GetCurrentView()
     {
         return $this->currentView;
     }
+
     public function Initialize()
     {
 
@@ -142,13 +149,18 @@ abstract class Project
         // Process All Views
         foreach($this->views as $key => $view)
         {
-            $currentView = $key;
+            $currentViewKey = $key;
+            $currentView = $this->views[$key];
+
             $view->Process();
         }
 
         // Output Views
         foreach($this->views as $key => $view)
         {
+            $currentViewKey = $key;
+            $currentView = $this->views[$key];
+
             $view->Generate();
         }
     }
@@ -291,6 +303,10 @@ abstract class Project
             $this->parsers["replace"] = new Replace($this);
         }
         $this->parsers["replace"]->Set($key, $value);
+    }
+    public function GetReplaceValue($key)
+    {
+        return $this->parsers["replace"]->Get($key);
     }
 }
 

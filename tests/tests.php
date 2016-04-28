@@ -13,16 +13,9 @@ class Tests extends Blueprint\Project {
 
         // Add some files / folders to ignore entirely
         $this->AddIgnore(".ignore");
+        $this->AddIgnore(".DS_Store");
 
-        $this->Replace("TITLE", "Blueprint Test Generated @ " + date("Y-m-d H:i:s"));
-    }
 
-    public function Replace($key, $value)
-    {
-        if (is_null($this->parsers["replace"]))
-        {
-            $this->parsers["replace"] = new Blueprint\Replace($this);
-        }
-        $this->parsers["replace"]->Set($key, $value);
+        $this->Replace("TITLE", "Blueprint Test Generated @ " . date("Y-m-d H:i:s"));
     }
 }

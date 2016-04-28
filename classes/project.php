@@ -267,8 +267,6 @@ abstract class Project
     }
 
 
-
-
     public function AddIgnore($filename)
     {
         if ( !in_array($filename, $this->ignoreFiles) ) {
@@ -283,6 +281,16 @@ abstract class Project
             return false;
         }
         return true;
+    }
+
+    public function Replace($key, $value)
+    {
+        if (is_null($this->parsers["replace"]))
+        {
+            // No need to namespace it as its not in a sub
+            $this->parsers["replace"] = new Replace($this);
+        }
+        $this->parsers["replace"]->Set($key, $value);
     }
 }
 

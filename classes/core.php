@@ -41,6 +41,8 @@ class Core
         // Assign our root directory
         $this->rootDirectory = getcwd();
 
+        $this->SetupEnvironment();
+
         $this->arguments = $passedArguments;
 
         switch($this->arguments[1])
@@ -297,6 +299,11 @@ class Core
 
         // Post initialize options
         $this->projects[$projectName]->PostInitialize();
+    }
+
+    private function SetupEnvironment()
+    {
+         date_default_timezone_set("America/Toronto");
     }
 
 

@@ -30,25 +30,16 @@ class View extends Template
     public function Generate()
     {
 
-        Core::Output(INFO, "GENERATE!");
-        print_r($this->header);
-
-
-
         if ( $this->header->destination != null) {
-                 //  print("||" . $this->header->destination . "$$\n\r");
-
-                    // Take relative add destination
+            // Take relative add destination
             Core::Output(INFO, "Using Custom Destination " . $this->header->destination . " with " . $this->name);
-
-
         } else {
             Core::Output(INFO, "Using Default Destination Destination for " . $this->name);
         }
 
 
-        //die();
-        $folder = $this->project->OutputPath;/// . str_replace("/", DIRECTORY_SEPARATOR, $this->uri);
+
+        $folder = $this->project->OutputPath;
         if ( !is_dir($folder)) {
             mkdir($folder, $this->project->getDirectoryPermission(), true);
         }

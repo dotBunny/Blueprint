@@ -16,8 +16,8 @@ abstract class Parser
 
     }
 
-    public function Process($content)
+    public function Process($template)
     {
-        return $content;
+        return $template->content;
     }
 }

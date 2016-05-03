@@ -27,6 +27,9 @@ class Tag
 
 	public function __construct($contents)
 	{
+    	// Clear out annoying spaced items in lists
+    	$contents = str_replace(", ", ",", $contents);
+
     	$this->baseContent = $contents;
 
         $exploded = explode(" ", $contents);
@@ -48,6 +51,7 @@ class Tag
                     $newValues[$i] = trim($newValues[$i]);
                 }
                 $this->keyValues[trim($split[0])] = $newValues;
+
             } else {
                 $this->keyValues[trim($split[0])] = trim(str_replace("\"", "", $split[1]));
             }
@@ -71,12 +75,12 @@ class Tag
 
     public function __get($name)
     {
-        return $this->keyValues[$name];;
+        return $this->keyValues[trim($name)];;
     }
 
     public function __set($key, $value)
     {
-        $this->keyValues[$key] = value;
+        $this->keyValues[trim($key)] = trim(value);
     }
 
 	public static function FindNext($tag, $content, $offset = 0)

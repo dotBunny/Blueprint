@@ -16,11 +16,15 @@ define(__NAMESPACE__ ."\MESSAGE", 3);
 define(__NAMESPACE__ ."\GENERATE", 4);
 define(__NAMESPACE__ ."\UPDATE", 5);
 
+define(__NAMESPACE__ ."\WINDOWS", 6);
+define(__NAMESPACE__ ."\UNIX", 7);
+
 class Core
 {
     public static $ErrorCount = 0;
     public static $WarningCount = 0;
     public static $CanRun = true;
+    public static $Platform = UNIX;
 
 
     private $arguments = array();
@@ -38,6 +42,16 @@ class Core
     */
     function __construct($passedArguments)
     {
+        // Platform stuff
+        if (strpos(strtolower($_SERVER['HTTP_USER_AGENT']), 'windows') !== false) {
+            Core::$Platform = WINDOWS;
+            system("cls");
+        } else {
+            Core::$Platform = UNIX;
+            system("clear");
+        }
+
+
         // Assign our root directory
         $this->rootDirectory = getcwd();
 

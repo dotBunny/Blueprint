@@ -10,7 +10,7 @@ class Template {
     protected $baseContent;
     protected $content;
     protected $header;
-
+    protected $owner = NULL;
 
     public function __construct(&$project, $path) {
         $this->project = $project;
@@ -26,15 +26,31 @@ class Template {
 
         if ($this->header != null && $this->header->IsValid())
         {
-            //TOOD CHANGE THIS TO MAKING IT GET the parse array entry
 
             $this->parsers = $this->header->parsers;
         }
     }
 
+	public function getHeaders()
+	{
+		return $this->header;
+	}
 
-    public function Process()
+	public function getOwner()
+	{
+    	return $this->owner;
+	}
+
+	public function getContent()
+	{
+		return $this->content;
+	}
+
+    public function Process($owner = NULL)
     {
+        if ( $owner != NULL ) {
+            $this->owner = $owner;
+        }
         // Get a fresh copy of the template
 	    $this->content = $this->baseContent;
 
@@ -89,17 +105,19 @@ class Template {
     			{
     				$this->content =
     					substr($this->content, 0, $start->getStartPosition()) .
-    					$this->project->templates[$start->getPrimaryValue()]->Process() .
+    					$this->project->templates[$start->getPrimaryValue()]->Process($this) .
     					substr($this->content, $end->getEndPosition());
+
 
     					$position = $end->getEndPosition();
     			} else {
 
     				$template = $this->project->templates[$start->getPrimaryValue()]->GetTemplate();
 
+
     				$this->content =
     					substr($this->content, 0, $start->getEndPosition()) .
-    					$this->project->templates[$start->getPrimaryValue()]->Process() .
+    					$this->project->templates[$start->getPrimaryValue()]->Process($this) .
     					substr($this->content, $end->getStartPosition() - 1);
 
     				$position = $end->getEndPosition() + strlen($template);
@@ -116,22 +134,21 @@ class Template {
             if (is_array($this->parsers)) {
     	        foreach($this->parsers as $name) {
     		       Core::Output(INFO, "Processing " . $this->path . " with " . $name);
-    		       $this->content = $this->project->GetParser($name)->Process($this->content);
+                   $this->content = $this->project->GetParser($name)->Process($this);
     	        }
 	        } else {
     	         Core::Output(INFO, "Processing " . $this->path . " with " . $this->parsers);
-                 $this->content = $this->project->GetParser($this->parsers)->Process($this->content);
+                 $this->content = $this->project->GetParser($this->parsers)->Process($this);
 	        }
         }
 
         // System Replacer
-        $this->content = $this->project->GetParser("SystemReplacer")->Process($this->content);
+        if ( $caller == NULL ) {
+            $this->content = $this->project->GetParser("SystemReplacer")->Process($this);
+        } else {
+            $this->content = $this->project->GetParser("SystemReplacer")->Process($caller);
+        }
 
-        return $this->content;
-    }
-
-    public function getContent()
-    {
         return $this->content;
     }
 }

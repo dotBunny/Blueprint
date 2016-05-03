@@ -8,11 +8,13 @@ class Replace extends Parser {
     public $startTag = "{";
     public $endTag = "}";
 
-    public function Process($content)
+    public function Process($template)
     {
-        foreach ($this->keyValues as $key => $value) {
+        $content = $template->getContent();
 
-            	$content = str_replace($this->startTag . $key . $this->endTag, $value, $content);
+        foreach ($this->keyValues as $key => $value)
+        {
+            $content = str_replace($this->startTag . $key . $this->endTag, $value, $content);
         }
         return $content;
     }

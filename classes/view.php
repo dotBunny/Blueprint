@@ -26,6 +26,16 @@ class View extends Template
         $this->name = strtolower($temp[0]);
     }
 
+    public function Process($owner = NULL)
+    {
+        Core::Output(MESSAGE, "Processing View \"" . $this->getName() . "\"");
+
+        if ( $owner == NULL ) {
+            parent::Process($this);
+        } else {
+            parent::Process($owner);
+        }
+    }
 
     public function Generate()
     {

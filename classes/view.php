@@ -30,7 +30,7 @@ class View extends Template
     {
         Core::Output(MESSAGE, "Processing View \"" . $this->getName() . "\"");
 
-        if ( $owner == NULL ) {
+        if ($owner == NULL) {
             parent::Process($this);
         } else {
             parent::Process($owner);

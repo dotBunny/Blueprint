@@ -4,7 +4,7 @@ namespace Blueprint;
 
 // Localized Defines
 define(__NAMESPACE__ ."\NAME", "Blueprint");
-define(__NAMESPACE__ ."\REVISION", 2);
+define(__NAMESPACE__ ."\REVISION", 3);
 
 // Output Categories
 define(__NAMESPACE__ ."\ERROR", 0);
@@ -50,6 +50,8 @@ class Core
             Core::$Platform = UNIX;
             system("clear");
         }
+
+        Core::Output(MESSAGE, " -=[ BLUEPRINT " . REVISION . " ]=-");
 
 
         // Assign our root directory
@@ -324,7 +326,7 @@ class Core
 
     private function Update()
     {
-
+        // TODO Need to take template data and update views
     }
 
 

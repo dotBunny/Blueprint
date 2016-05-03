@@ -143,11 +143,8 @@ class Template {
         }
 
         // System Replacer
-        if ( $caller == NULL ) {
-            $this->content = $this->project->GetParser("SystemReplacer")->Process($this);
-        } else {
-            $this->content = $this->project->GetParser("SystemReplacer")->Process($caller);
-        }
+        $this->content = $this->project->GetParser("SystemReplacer")->Process($this);
+
 
         return $this->content;
     }

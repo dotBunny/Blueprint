@@ -76,28 +76,34 @@ abstract class Project
         // Find All Templates
         $templateFiles = Core::GetFiles($this->TemplatePath, $this->getIgnoreFiles());
         Core::Output(INFO, "Searching " . $this->TemplatePath . " for Templates ...");
-        foreach($templateFiles as $path)
+        if (!is_null($templateFiles) && !empty($templateFiles))
         {
-            $file = end(explode(DIRECTORY_SEPARATOR, $path));
-            $fileChunked = explode(".", $file);
+            foreach($templateFiles as $path)
+            {
+                $file = end(explode(DIRECTORY_SEPARATOR, $path));
+                $fileChunked = explode(".", $file);
 
-            $this->templates[strtolower($fileChunked[0])] = new Template($this, $path);
+                $this->templates[strtolower($fileChunked[0])] = new Template($this, $path);
+            }
         }
         Core::Output(INFO, count($this->templates) . " Templates Found.");
 
 
         // Find All Parsers
         $parserFiles =  Core::GetFiles($this->ParsersPath, $this->getIgnoreFiles());
-        foreach($parserFiles as $path)
+        if (!is_null($parserFiles) && !empty($parserFiles))
         {
-            Core::Output(INFO, "Including " . $path);
-            require_once($path);
+            foreach($parserFiles as $path)
+            {
+                Core::Output(INFO, "Including " . $path);
+                require_once($path);
 
-            // Determine class name (upper case first character of the file name)
-            $className = strtolower(str_replace(".php", "", end(explode(DIRECTORY_SEPARATOR, $path))));
+                // Determine class name (upper case first character of the file name)
+                $className = strtolower(str_replace(".php", "", end(explode(DIRECTORY_SEPARATOR, $path))));
 
-            // Create parser object
-            eval("\$this->parsers[" . $className . "] = new \\" . ucfirst($className) . "(\$this);");
+                // Create parser object
+                eval("\$this->parsers[" . $className . "] = new \\" . ucfirst($className) . "(\$this);");
+            }
         }
 
         // Load a default replacer
@@ -122,6 +128,12 @@ abstract class Project
         // Create new output folder
         if (!mkdir($this->OutputPath, $this->getDirectoryPermission(), true)) {
             Core::Output(ERROR, "Unable to create output folder for \"" . $this->Name . "\" @ " . $this->OutputPath);
+            return;
+        }
+
+        // Check we have a site input folde
+        if ( !is_dir($this->SitePath) ) {
+            Core::Output(ERROR, "The sites input folder is invalid. (" . $this->SitePath . ")");
             return;
         }
 

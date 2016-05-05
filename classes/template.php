@@ -66,7 +66,7 @@ class Template {
 	public function getAbsoluteOwner()
 	{
     	// Recursive all the way up to the top
-    	if ( $this->owner != NULL ) {
+    	if ( $this->owner != NULL && $this->owner != $this) {
         	return $this->owner->getAbsoluteOwner();
     	}
         else {

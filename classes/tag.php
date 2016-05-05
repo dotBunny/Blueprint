@@ -86,6 +86,8 @@ class Tag
 	public static function FindNext($tag, $content, $offset = 0)
 	{
         $startPosition = strpos($content, TAG_START . $tag, $offset);
+
+
         if ( $startPosition === false  ) {
             return null;
         }
@@ -137,6 +139,10 @@ class Tag
 	public function getValues()
 	{
     	return $this->values;
+	}
+	public function getLength()
+	{
+    	return strlen($this->baseContent);
 	}
 
 	public function setPositions($start, $end)

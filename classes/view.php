@@ -28,7 +28,7 @@ class View extends Template
 
     public function Process($owner = NULL)
     {
-        Core::Output(MESSAGE, "Processing View \"" . $this->getName() . "\"");
+        Core::Output(MESSAGE, "Processing View \"" . $this->getName() . "\" (" . $this->getPath() . ")");
 
         if ($owner == NULL) {
             parent::Process($this);

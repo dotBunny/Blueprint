@@ -11,6 +11,9 @@ class Template {
     protected $content;
     protected $header;
     protected $owner = NULL;
+    protected $name;
+
+    protected $subtemplates = array();
 
     public function __construct(&$project, $path) {
         $this->project = $project;
@@ -29,6 +32,19 @@ class Template {
 
             $this->parsers = $this->header->parsers;
         }
+
+        $temp = explode(".", end(explode(DIRECTORY_SEPARATOR, $this->path)));
+        $this->name = strtolower($temp[0]);
+    }
+
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    public function getPath()
+    {
+        return $this->path;
     }
 
 	public function getHeaders()
@@ -38,7 +54,24 @@ class Template {
 
 	public function getOwner()
 	{
-    	return $this->owner;
+    	if ( $this->owner != NULL ) {
+        	return $this->owner;
+    	}
+        else {
+            return $this;
+        }
+	}
+
+	// TODO : This function should be used in the header.php parser, just it is infinite ;/
+	public function getAbsoluteOwner()
+	{
+    	// Recursive all the way up to the top
+    	if ( $this->owner != NULL ) {
+        	return $this->owner->getAbsoluteOwner();
+    	}
+        else {
+            return $this;
+        }
 	}
 
 	public function getContent()
@@ -48,9 +81,11 @@ class Template {
 
     public function Process($owner = NULL)
     {
+
         if ( $owner != NULL ) {
             $this->owner = $owner;
         }
+
         // Get a fresh copy of the template
 	    $this->content = $this->baseContent;
 
@@ -74,10 +109,13 @@ class Template {
             $position = 0;
         }
 
-		// Template In Template
+		// Template In Templates
         while ($position < strlen($this->content)) {
 	        // Search through for all templates and and replace contents with parent template, ignoring anything in there that is a template
 			// There should be no nested templates at this stage
+			//print "\n\r". $this->content . "\n\r";
+
+
 			$start = Tag::FindNext(TAG_TEMPLATE_START, $this->content, $position);
 			if ( $start == null || !$start->IsValid() ) {
     			$position = strlen($this->content);
@@ -92,6 +130,7 @@ class Template {
 				break;
 			}
 
+
 /*
             if (!array_key_exists($start->getPrimaryValue(), $this->project->templates)) {
                 $position = $start->getEndPosition();
@@ -99,31 +138,46 @@ class Template {
             }
 */
 
-            if ( !empty($start->getPrimaryValue())){
+            if ( !empty($start->getPrimaryValue()))
+            {
 
+                Core::Output(INFO, "Found Template \"" . $start->getPrimaryValue() . "\" @ Position " . $start->getStartPosition() . "-" . $end->getEndPosition());
+                //" [" . substr($this->content, $start->getStartPosition(), $start->getEndPosition() - $start->getStartPosition()) . "] to Position " . $end->getEndPosition() .
+                //" [" . substr($this->content, $end->getStartPosition(), $end->getEndPosition() - $end->getStartPosition()) . "]");
+
+
+                $this->subtemplates[] = $start->getPrimaryValue();
+
+
+				$template = clone $this->project->templates[$start->getPrimaryValue()];
+                $newContent = $template->Process($this);
+
+                // SOmething up here? Maybe it gets removed?
     			if($this->project->getRemoveTags())
     			{
-    				$this->content =
-    					substr($this->content, 0, $start->getStartPosition()) .
-    					$this->project->templates[$start->getPrimaryValue()]->Process($this) .
-    					substr($this->content, $end->getEndPosition());
+    				$this->content =    substr($this->content, 0, $start->getStartPosition()) .
+    				                    $newContent .
+    				                    substr($this->content, $end->getEndPosition());
 
-
-    					$position = $end->getEndPosition();
-    			} else {
-
-    				$template = $this->project->templates[$start->getPrimaryValue()]->GetTemplate();
-
-
-    				$this->content =
-    					substr($this->content, 0, $start->getEndPosition()) .
-    					$this->project->templates[$start->getPrimaryValue()]->Process($this) .
-    					substr($this->content, $end->getStartPosition() - 1);
-
-    				$position = $end->getEndPosition() + strlen($template);
+                    // Get the start position, add the length of the new content, and then we should be at the right
+                    // place to start searching forward
+    				$position = $start->getStartPosition() + strlen($newContent);
 
     			}
-			} else {
+    			else
+    			{
+    				$this->content =    substr($this->content, 0, $start->getEndPosition()) .
+    				                    $newContent .
+    				                    substr($this->content, $end->getStartPosition() - 1);
+
+                    // Modified length
+    				$position = $start->getEndPosition() + strlen($newContent) + $end->getLength();
+    			}
+			}
+			else
+			{
+
+    			Core::Output(WARNING, "\n\r" . substr($this->content, $start->getStartPosition(), $start->getEndPosition() - $start->getStartPosition()) . "\n\r");
                 $position = $start->getEndPosition();
 			}
 		}

@@ -358,6 +358,13 @@ abstract class Project
                 return true;
             }
 
+
+			// Is this file a compress-ible file?
+			if ( $this->getGlobalCompression())
+			{
+				print $source . "\n\r";
+			}
+			
             return copy($source, $dest);
         }
 
@@ -474,6 +481,12 @@ abstract class Project
             return false;
         }
         return true;
+    }
+    public function AddIgnoreCompression($relativePath)
+    {
+	    if ( !in_array ($relativePath, $this->ignoreCompression) ) {
+		    $this->ignoreCompression[] = $relativePath;
+	    }
     }
 
     public function Replace($key, $value)

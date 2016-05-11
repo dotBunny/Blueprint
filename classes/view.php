@@ -47,7 +47,7 @@ class View extends Template
             Core::Output(INFO, "Using Default Destination Destination for " . $this->name);
         }
 
-        $folder = $this->project->OutputPath;
+        $folder = $this->project->BuildPath;
         if ( !is_dir($folder)) {
             mkdir($folder, $this->project->getDirectoryPermission(), true);
         }

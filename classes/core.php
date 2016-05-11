@@ -13,11 +13,12 @@ define(__NAMESPACE__ ."\WARNING", 2);
 define(__NAMESPACE__ ."\MESSAGE", 3);
 
 // Run Categories
-define(__NAMESPACE__ ."\GENERATE", 4);
+define(__NAMESPACE__ ."\BUILD", 4);
 define(__NAMESPACE__ ."\UPDATE", 5);
+define(__NAMESPACE__ ."\DEPLOY", 6);
 
-define(__NAMESPACE__ ."\WINDOWS", 6);
-define(__NAMESPACE__ ."\UNIX", 7);
+define(__NAMESPACE__ ."\WINDOWS", 7);
+define(__NAMESPACE__ ."\UNIX", 8);
 
 class Core
 {
@@ -67,8 +68,12 @@ class Core
                 $this->mode = UPDATE;
                 break;
             case "generate":
+            case "build":
+                $this->mode = BUILD;
+                break;
             case "output":
-                $this->mode = GENERATE;
+            case "deploy":
+                $this->mode = DEPLOY;
                 break;
             default:
                 Core::Output(ERROR, "You must provide an action to do with Blueprint.");
@@ -226,26 +231,44 @@ class Core
             return;
         }
 
-        if ( $this->mode == GENERATE ) {
-            $this->Generate();
+        if ( $this->mode == BUILD ) {
+            $this->Build();
         } elseif ( $this->mode == UPDATE ) {
             $this->Update();
+        } elseif ( $this->mode == DEPLOY ) {
+            $this->Deploy();
         }
     }
 
-    private function Generate()
+    private function Build()
     {
        foreach ($this->projects as $key => $project)
        {
-            $project->Generate();
+            $project->Build();
        }
 
         // Output Message Counts
         if ( Core::$ErrorCount > 0 ) {
-            Core::Output(ERROR, "Finished Generate with " . Core::$ErrorCount-- . " Error[s], and " . Core::$WarningCount . " Warning[s].");
+            Core::Output(ERROR, "Finished Build with " . Core::$ErrorCount-- . " Error[s], and " . Core::$WarningCount . " Warning[s].");
         } elseif ( Core::$WarningCount > 0 ) {
-            Core::Output(WARNING, "Finished Generate with " . Core::$ErrorCount . " Error[s], and " . Core::$WarningCount-- . " Warning[s].");
+            Core::Output(WARNING, "Finished Build with " . Core::$ErrorCount . " Error[s], and " . Core::$WarningCount-- . " Warning[s].");
         }
+    }
+
+    private function Deploy()
+    {
+        foreach ($this->projects as $key => $project)
+       {
+            $project->Deploy();
+       }
+
+        // Output Message Counts
+        if ( Core::$ErrorCount > 0 ) {
+            Core::Output(ERROR, "Finished Deploy with " . Core::$ErrorCount-- . " Error[s], and " . Core::$WarningCount . " Warning[s].");
+        } elseif ( Core::$WarningCount > 0 ) {
+            Core::Output(WARNING, "Finished Deploy with " . Core::$ErrorCount . " Error[s], and " . Core::$WarningCount-- . " Warning[s].");
+        }
+
     }
 
     private function LoadClasses()
@@ -326,7 +349,18 @@ class Core
 
     private function Update()
     {
-        // TODO Need to take template data and update views
+
+       foreach ($this->projects as $key => $project)
+       {
+            $project->Update();
+       }
+
+        // Output Message Counts
+        if ( Core::$ErrorCount > 0 ) {
+            Core::Output(ERROR, "Finished Update with " . Core::$ErrorCount-- . " Error[s], and " . Core::$WarningCount . " Warning[s].");
+        } elseif ( Core::$WarningCount > 0 ) {
+            Core::Output(WARNING, "Finished Update with " . Core::$ErrorCount . " Error[s], and " . Core::$WarningCount-- . " Warning[s].");
+        }
     }
 
 

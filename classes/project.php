@@ -1,6 +1,8 @@
 <?php
 
 namespace Blueprint;
+use MatthiasMullie\Minify;
+
 
 abstract class Project
 {
@@ -59,15 +61,15 @@ abstract class Project
             case "TemplatePath":
                 if ( Core::IsAbsolutePath($value) )
                 {
-                    $this->keyValues[$key] = $path;
+                    $this->keyValues[$key] = realpath($path);
                 }
                 else
                 {
-                    $this->keyValues[$key] = Core::BuildPath($this->WorkingDirectory, $value);
+                    $this->keyValues[$key] = realpath(Core::BuildPath($this->WorkingDirectory, $value));
                 }
                 break;
             default:
-                $this->keyValues[$key] = $value;
+                $this->keyValues[$key] = realpath($value);
                 break;
         }
     }
@@ -202,8 +204,6 @@ abstract class Project
     {
         // Get Build Files
         $buildFiles = $this->GetFileList($this->BuildPath, $this->getIgnoreFiles());
-
-        // Remove Start Of Path
         for($i = 0; $i < count($buildFiles); $i++)
         {
             $buildFiles[$i] = str_replace($this->BuildPath, "", $buildFiles[$i]);
@@ -232,8 +232,18 @@ abstract class Project
         // Check and copy
         foreach($buildFiles as $buildFile)
         {
+            // Check that the folder actually exists
+
+            if (!is_dir(dirname($this->OutputPath . $buildFile)))
+            {
+                Core::Output(INFO, "Creating Directory " . dirname($this->OutputPath . $buildFile));
+                mkdir(dirname($this->OutputPath . $buildFile), $this->getDirectoryPermission(), true);
+            }
+
+
+            // Hash Check
             $buildFileHash = hash_file("md5", $this->BuildPath . $buildFile);
-            $outputFileHash = 0;
+            $outputFileHash = "NOT FOUND";
 
             // Check Stamp
             if ( file_exists($this->OutputPath . $buildFile) )
@@ -242,9 +252,8 @@ abstract class Project
             }
 
             // If the stamp is newer, and hash is different
-            if (($outputFileHash != $buildFileHash))
+            if ($outputFileHash != $buildFileHash)
             {
-
                 Core::Output(INFO, "Deploying " . $this->OutputPath . $buildFile . " ...");
                 copy($this->BuildPath . $buildFile, $this->OutputPath . $buildFile);
             }
@@ -260,7 +269,6 @@ abstract class Project
             // No support for symlinks
             $files = array_merge($files, $this->GetFilesList(symlink(readlink($source)), $ignoreFiles));
         }
-
 
         // If it truly is a file
         if (is_file($source))
@@ -283,7 +291,6 @@ abstract class Project
 
                 $files = array_merge($files, $this->GetFileList("$source/$entry", $ignoreFiles));
             }
-
         }
 
         return $files;
@@ -292,14 +299,12 @@ abstract class Project
 
     private function FindViews($source, $ignoreFiles)
     {
-
          // Check for symlinks
         if (is_link($source)) {
             // No support for symlinks
             return true;
 //            return symlink(readlink($source), $dest);
         }
-
 
         // If it truly is a file
         if (is_file($source))
@@ -319,9 +324,11 @@ abstract class Project
         {
             $dir = dir($source);
 
-            while (false !== $entry = $dir->read()) {
+            while (false !== $entry = $dir->read())
+            {
                 // Skip pointers
-                if ($entry == '.' || $entry == '..' || in_array($entry, $ignoreFiles)) {
+                if ($entry == '.' || $entry == '..' || in_array($entry, $ignoreFiles))
+                {
                     continue;
                 }
 
@@ -339,6 +346,7 @@ abstract class Project
 
     private function ProcessSiteFolder($source, $dest, $folderPermissions, $filePermissions, $ignoreFiles = null)
     {
+
          // Check for symlinks
         if (is_link($source)) {
             // No support for symlinks
@@ -359,13 +367,30 @@ abstract class Project
             }
 
 
-			// Is this file a compress-ible file?
+
+
+            // Is this file a compress-ible file?
 			if ( $this->getGlobalCompression())
 			{
-				print $source . "\n\r";
+    			switch(strtolower(pathinfo($dest, PATHINFO_EXTENSION)))
+    			{
+        			case 'js':
+        			    $minifier = new Minify\JS($source);
+                        Core::Output(INFO, "Compressing " . $source);
+        			    return file_put_contents($dest, $minifier->minify());
+        			case 'css':
+        			    $minifier = new Minify\CSS($source);
+                        Core::Output(INFO, "Compressing " . $source);
+        			    return file_put_contents($dest, $minifier->minify());
+                    default:
+                        return copy($source, $dest);
+    			}
+
 			}
-			
-            return copy($source, $dest);
+			else
+			{
+    			return copy($source, $dest);
+			}
         }
 
         // Make destination directory

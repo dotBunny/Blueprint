@@ -1,3 +1,6 @@
 [submodule "plugins/minifier"]
 	path = plugins/minifier
 	url = https://github.com/matthiasmullie/minify.git
+[submodule "plugins/converter"]
+	path = plugins/converter
+	url = https://github.com/matthiasmullie/path-converter.git

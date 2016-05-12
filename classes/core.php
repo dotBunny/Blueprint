@@ -20,6 +20,14 @@ define(__NAMESPACE__ ."\DEPLOY", 6);
 define(__NAMESPACE__ ."\WINDOWS", 7);
 define(__NAMESPACE__ ."\UNIX", 8);
 
+
+// Load Plugins
+require_once("plugins/converter/src/Converter.php");
+require_once("plugins/minifier/src/Minify.php");
+require_once("plugins/minifier/src/JS.php");
+require_once("plugins/minifier/src/CSS.php");
+require_once("plugins/minifier/src/Exception.php");
+
 class Core
 {
     public static $ErrorCount = 0;

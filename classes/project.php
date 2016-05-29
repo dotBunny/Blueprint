@@ -61,18 +61,20 @@ abstract class Project
             case "TemplatePath":
                 if ( Core::IsAbsolutePath($value) )
                 {
-                    $this->keyValues[$key] = realpath($path);
+                    $this->keyValues[$key] = realpath($path) ?: $path;
                 }
                 else
                 {
-                    $this->keyValues[$key] = realpath(Core::BuildPath($this->WorkingDirectory, $value));
+                    $this->keyValues[$key] = realpath(Core::BuildPath($this->WorkingDirectory, $value)) ?: Core::BuildPath($this->WorkingDirectory, $value);
                 }
                 break;
             default:
-                $this->keyValues[$key] = realpath($value);
+                $this->keyValues[$key] = $value;
                 break;
         }
     }
+
+
 
     public function Initialize()
     {
@@ -122,7 +124,7 @@ abstract class Project
 
     public function Update()
     {
-        Core::Output(MESSAGE, "Updating " . $this->name);
+        Core::Output(MESSAGE, "Updating " . $this->Name);
 
         // Check we have a site input folde
         if ( !is_dir($this->SitePath) ) {
@@ -148,7 +150,7 @@ abstract class Project
 
     public function Build()
     {
-        Core::Output(MESSAGE, "Building " . $this->name);
+        Core::Output(MESSAGE, "Building " . $this->Name);
 
         // Remove old output folder
         if(is_dir($this->BuildPath))
@@ -372,12 +374,19 @@ abstract class Project
             // Is this file a compress-ible file?
 			if ( $this->getGlobalCompression())
 			{
+
+				// Copy / Return the already minimized versions of libraries
+				if ( strpos($source, ".min.") !== false || strpos($source, "-min.") ) {
+					return copy($source, $dest);
+				}
+
     			switch(strtolower(pathinfo($dest, PATHINFO_EXTENSION)))
     			{
         			case 'js':
-        			    $minifier = new Minify\JS($source);
-                        Core::Output(INFO, "Compressing " . $source);
-        			    return file_put_contents($dest, $minifier->minify());
+						$minifier = new Minify\JS($source);
+						Core::Output(INFO, "Compressing " . $source);
+						return file_put_contents($dest, $minifier->minify());
+
         			case 'css':
         			    $minifier = new Minify\CSS($source);
                         Core::Output(INFO, "Compressing " . $source);
@@ -385,7 +394,6 @@ abstract class Project
                     default:
                         return copy($source, $dest);
     			}
-
 			}
 			else
 			{
@@ -415,13 +423,10 @@ abstract class Project
         return true;
     }
 
-
-
-
-
-
-
-
+    public function FileExists($relativePath)
+    {
+        return file_exists($this->SitePath . $relativePath);
+    }
 
     public function GetParser($key)
     {

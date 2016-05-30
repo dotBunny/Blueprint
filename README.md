@@ -31,8 +31,16 @@ Add global replace options for {TAG}'s
 # Generating Content
 
 
-php blueprint.php generate ./tests
+php blueprint.php build ./tests
 
+
+
+
+## Build
+Build compiles a working copy of the site to a target directory, this is useful for checking how files will look when compiled. This folder is wiped clean every build so that it is the abosulte latest version of all files involved.
+
+## Deploy
+This takes the build folder and compares it to a deployment folder and only makes the changes it finds, copies over new files, and deletes files not found in the build folder. This is useful for things where you sync deployments.
 
 
 ## Blueprint Definition

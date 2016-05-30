@@ -428,6 +428,162 @@ abstract class Project
         return file_exists($this->SitePath . $relativePath);
     }
 
+
+
+    // This turns things into absolute paths, its just simpler given we will be moving things around
+	// We allow for 3 deep (maybe change this later)
+    public function ConvertPathing($content, $start, $end, $relativeTo = NULL) {
+
+        $relativeToSomething = false;
+        if ( $relativeTo != NULL ) {
+            $relativeToSomething = true;
+            $lastSlash = strrpos($relativeTo, '/');
+
+            if ($lastSlash === false) { // note: three equal signs
+                // not found...
+            } else {
+                $relativeTo = substr($relativeTo, 0, $lastSlash + 1);
+            }
+
+            // Root Fix
+            if ( $relativeTo == "index.html" )
+            {
+                $relativeTo = "";
+            }
+        }
+
+        if ( !$relativeToSomething ) {
+            Core::Output(INFO, "Converting to absolute pathing ...");
+        } else {
+            Core::Output(INFO, "Converting to relative pathing (" . $relativeTo . ") ...");
+        }
+
+        $characterIndex = 0;
+
+        while($characterIndex < strlen($content))
+        {
+            $nextStart = strpos($content, $start, $characterIndex);
+            $nextEnd = $nextStart;
+
+            if ( $nextStart > 0 ) {
+                $nextEnd  = strpos($content, $end, $nextStart + strlen($start));
+
+                if ( $nextEnd > 0) {
+
+                    $length = $nextEnd - $nextStart;
+
+                    // Get src in question
+                    $url = substr($content, $nextStart + strlen($start), $length - strlen($start));
+                    $new_url = NULL;
+
+                    if (
+                        substr($url,0,4) == "http" || // Web Address
+                        substr($url,0,1) == "#" || // Anchor
+                        empty(trim($url)) || // Not actually anyhting
+                        (substr($url,0,1) == "/" && !$relativeToSomething))
+                    {
+                        // Already a root link
+                    }
+                    else
+                    {
+
+                        Core::Output(INFO, "Checking Path for " . $url . " ...");
+
+
+                        if (!$relativeToSomething) {
+
+
+                            // is the URL simple enough that its just at the base folder
+                            if($this->FileExists("/" . $url))
+                            {
+                                $new_url = "/" . $url;
+                            }
+                            else if ( substr($url, 0, 3) == "../" && $this->FileExists("/" . substr($url, 3)))
+                            {
+                                $new_url = "/" . substr($url, 3);
+                            }
+                            else if ( substr($url, 0, 6) == "../../" && $this->FileExists("/" . substr($url, 6)))
+                            {
+                                $new_url = "/" . substr($url, 6);
+                            }
+                            else if ( substr($url, 0, 9) == "../../../" && $this->FileExists("/" . substr($url, 9)))
+                            {
+                                $new_url = "/" . substr($url, 9);
+                            }
+                            else
+                            {
+                                Core::Output(WARNING, "Unable to find referenced content " . $url);
+                            }
+                        } else {
+
+
+
+                            //  blog/test-day/
+                            $output_directories_deep = substr_count($relativeTo, '/');
+
+
+
+                            // Bounce the first slash
+                            if ( substr($url, 0, 1) == '/' ) {
+                                $url = substr($url,1);
+                            }
+
+                            // Strip the "../"
+                            $new_url = str_replace("../","", $url);
+
+                            // Check our pathing
+                            $new_url = str_repeat("../", $output_directories_deep) . $new_url;
+
+/*
+
+                            print "New URL: " . $test_url;
+
+                            if($this->FileExists("/" . $test_url))
+                            {
+                                print "FOUND";
+                            }
+
+                            if ( $this->FileExists($url) ) {
+                                $new_url = $url;
+                            } else if ( $this->FileExists("../" . $url) ) {
+                                $new_url = "../" . $url;
+                            } else if ( $this->FileExists("../../" . $url) ) {
+                                $new_url = "../../" . $url;
+                            } else if ( $this->FileExists("../../../" . $url) ) {
+                                $new_url = "../../../" . $url;
+                            }
+*/
+
+
+                            // Relative too - this assumes that the links originally are based on the root path
+
+
+
+                        }
+                    }
+
+                    // Replace the content
+                    if ( $new_url != NULL ) {
+                        $content = substr($content, 0, $nextStart + strlen($start)) . $new_url . substr($content, $nextEnd);
+                        $characterIndex = $nextStart + strlen($start) + strlen($new_url) + strlen($end);
+                    } else {
+                       if ($nextEnd != $nextStart ) {
+                       $characterIndex = $nextEnd;
+                       } else {
+                       $characterIndex = $nextStart;
+                       }
+                    }
+
+                } else {
+                    Core::Output(ERROR, "Unable to end to opened reference content.");
+                }
+            }
+            $characterIndex++;
+        }
+
+        return $content;
+    }
+
     public function GetParser($key)
     {
         return $this->parsers[trim($key)];

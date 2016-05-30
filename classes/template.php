@@ -12,10 +12,15 @@ class Template {
     protected $header;
     protected $owner = NULL;
     protected $name;
+    protected $filename;
+    protected $relativePath;
 
     protected $subtemplates = array();
 
     public function __construct(&$project, $path) {
+
+
+
         $this->project = $project;
         $this->path = $path;
         if ( !file_exists($this->path) ) { return; }
@@ -32,11 +37,26 @@ class Template {
 
             $this->parsers = $this->header->parsers;
         }
-
-        $temp = explode(".", end(explode(DIRECTORY_SEPARATOR, $this->path)));
+        $this->filename = end(explode(DIRECTORY_SEPARATOR, $this->path));
+        $temp = explode(".",$this->filename);
         $this->name = strtolower($temp[0]);
+
+        // Figure out relative path
+        $this->relativePath = str_replace($this->project->SitePath, "", $this->path);
+        if ( substr($this->relativePath, 0,1) == '/') {
+            $this->relativePath = substr($this->relativePath, 1);
+        }
     }
 
+    public function getRelativePath()
+    {
+        print "\t" . $this->name . " - " . $this->relativePath . "\n\r";
+        return $this->relativePath;
+    }
+    public function getFilename()
+    {
+        return $this->filename;
+    }
     public function getName()
     {
         return $this->name;
@@ -81,66 +101,7 @@ class Template {
 
 	public function Update()
 	{
-        // Get the header so we know the parsers
-        $this->header = Tag::FindNext(TAG_BLUEPRINT, $this->content, 0);
-
-
-        if ($this->header != null && $this->header->IsValid())
-        {
-            // Set position to be at the end of the header tag
-            $position = $this->header->getEndPosition();
-        } else {
-            // No header, start from beginning?
-            $position = 0;
-        }
-
-
-
-        // Template In Templates
-        while ($position < strlen($this->content)) {
-
-			$start = Tag::FindNext(TAG_TEMPLATE_START, $this->content, $position);
-			if ( $start == null || !$start->IsValid() ) {
-    			$position = strlen($this->content);
-                break;
-			}
-
-            // Check the end
-            $end = Tag::FindNext(TAG_TEMPLATE_END, $this->content, $start->getEndPosition());
-			// No more tags found
-			if ( $end == null || !$end->IsValid() ) {
-				$position = strlen($this->content);
-				break;
-			}
-
-
-
-            if ( !empty($start->getPrimaryValue()))
-            {
-
-                Core::Output(INFO, "Found Template \"" . $start->getPrimaryValue() . "\" @ Position " . $start->getStartPosition() . "-" . $end->getEndPosition());
-
-                $this->subtemplates[] = $start->getPrimaryValue();
-				$template = clone $this->project->templates[$start->getPrimaryValue()];
-                $newContent = $template->Process($this);
-
-                // SOmething up here? Maybe it gets removed?
-				$this->content =    substr($this->content, 0, $start->getEndPosition()) .
-				                    $newContent .
-				                    substr($this->content, $end->getStartPosition() - 1);
-
-                // Modified length
-				$position = $start->getEndPosition() + strlen($newContent) + $end->getLength();
-
-			}
-			else
-			{
-                $position = $start->getEndPosition();
-			}
-        }
-
-        // Write View File Out w/ Updated Templates
-        file_put_contents($this->path, $this->content);
+       // No need to update actual template files ever
 	}
 
     public function Process($owner = NULL)

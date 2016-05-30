@@ -16,6 +16,7 @@ define(__NAMESPACE__ ."\MESSAGE", 3);
 define(__NAMESPACE__ ."\BUILD", 4);
 define(__NAMESPACE__ ."\UPDATE", 5);
 define(__NAMESPACE__ ."\DEPLOY", 6);
+define(__NAMESPACE__ ."\ALL", 9);
 
 define(__NAMESPACE__ ."\WINDOWS", 7);
 define(__NAMESPACE__ ."\UNIX", 8);
@@ -83,11 +84,14 @@ class Core
             case "deploy":
                 $this->mode = DEPLOY;
                 break;
+            case "all":
+                $this->mode = ALL;
+                break;
             default:
                 Core::Output(ERROR, "You must provide an action to do with Blueprint.");
 
                  // Output information on how to run Blueprint with project files/paths
-                Core::Output(INFO, "Acceptable actions are \"update\" which pushes template updates to views, and \"generate\" which will update the output.");
+                Core::Output(INFO, "Acceptable actions are \"update\" which pushes template updates to views, and \"build\" which will update the build folder, and \"deploy\" which does a comparison based copy to a target.");
 
                 // Stop any further
                 Core::$CanRun = false;
@@ -245,6 +249,10 @@ class Core
         } elseif ( $this->mode == UPDATE ) {
             $this->Update();
         } elseif ( $this->mode == DEPLOY ) {
+            $this->Deploy();
+        } elseif ($this->mode == ALL ) {
+            Core::Output(INFO, "Executing Build & Deploy ...");
+            $this->Build();
             $this->Deploy();
         }
     }

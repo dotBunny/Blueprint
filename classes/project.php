@@ -204,6 +204,8 @@ abstract class Project
 
     public function Deploy()
     {
+
+        Core::Output(INFO, "Deploying Site ...");
         // Get Build Files
         $buildFiles = $this->GetFileList($this->BuildPath, $this->getIgnoreFiles());
         for($i = 0; $i < count($buildFiles); $i++)
@@ -245,7 +247,6 @@ abstract class Project
 
             // Hash Check
             $buildFileHash = hash_file("md5", $this->BuildPath . $buildFile);
-            $outputFileHash = "NOT FOUND";
 
             // Check Stamp
             if ( file_exists($this->OutputPath . $buildFile) )
@@ -486,10 +487,6 @@ abstract class Project
                     }
                     else
                     {
-
-                        Core::Output(INFO, "Checking Path for " . $url . " ...");
-
-
                         if (!$relativeToSomething) {
 
 
@@ -533,31 +530,6 @@ abstract class Project
 
                             // Check our pathing
                             $new_url = str_repeat("../", $output_directories_deep) . $new_url;
-
-/*
-
-                            print "New URL: " . $test_url;
-
-                            if($this->FileExists("/" . $test_url))
-                            {
-                                print "FOUND";
-                            }
-
-                            if ( $this->FileExists($url) ) {
-                                $new_url = $url;
-                            } else if ( $this->FileExists("../" . $url) ) {
-                                $new_url = "../" . $url;
-                            } else if ( $this->FileExists("../../" . $url) ) {
-                                $new_url = "../../" . $url;
-                            } else if ( $this->FileExists("../../../" . $url) ) {
-                                $new_url = "../../../" . $url;
-                            }
-*/
-
-
-                            // Relative too - this assumes that the links originally are based on the root path
-
-
 
                         }
                     }

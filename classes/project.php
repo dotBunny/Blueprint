@@ -7,6 +7,7 @@ use MatthiasMullie\Minify;
 abstract class Project
 {
     public $templates = array();
+    public $Sitemap;
 
     protected $views = array();
     protected $parsers = array();
@@ -31,6 +32,7 @@ abstract class Project
     private $filePermission = 0666;
 
     private $ignoreFiles = array(".DS_Store", ".git", ".svn");
+    private $ignoreMasks = array();
 
     public function __construct($rootDirectory, $workingDirectory) {
 
@@ -43,6 +45,9 @@ abstract class Project
         $this->TemplatePath = "templates";
         $this->ParsersPath = "parsers";
         $this->BuildPath = "build";
+
+        $this->Sitemap = new Sitemap();
+
     }
 
     public function __get($name)
@@ -84,7 +89,7 @@ abstract class Project
     public function PostInitialize()
     {
         // Find All Templates
-        $templateFiles = Core::GetFiles($this->TemplatePath, $this->getIgnoreFiles());
+        $templateFiles = Core::GetFiles($this->TemplatePath, $this->getIgnoreFiles(), $this->getIgnoreMasks());
         Core::Output(INFO, "Searching " . $this->TemplatePath . " for Templates ...");
         if (!is_null($templateFiles) && !empty($templateFiles))
         {
@@ -100,7 +105,7 @@ abstract class Project
 
 
         // Find All Parsers
-        $parserFiles =  Core::GetFiles($this->ParsersPath, $this->getIgnoreFiles());
+        $parserFiles =  Core::GetFiles($this->ParsersPath, $this->getIgnoreFiles(), $this->getIgnoreMasks());
         if (!is_null($parserFiles) && !empty($parserFiles))
         {
             foreach($parserFiles as $path)
@@ -136,7 +141,7 @@ abstract class Project
         $this->views = array();
 
         // Find All Views
-        $this->FindViews($this->SitePath, $this->getIgnoreFiles());
+        $this->FindViews($this->SitePath, $this->getIgnoreFiles(), $this->getIgnoreMasks());
 
 
         // Process All Views
@@ -151,6 +156,8 @@ abstract class Project
     public function Build()
     {
         Core::Output(MESSAGE, "Building " . $this->Name);
+        $this->Sitemap->SetOutputPath($this->BuildPath);
+        $this->Sitemap->SetBaseURI($this->BaseURI);
 
         // Remove old output folder
         if(is_dir($this->BuildPath))
@@ -182,9 +189,13 @@ abstract class Project
                 $this->BuildPath,
                 $this->getDirectoryPermission(),
                 $this->getFilePermission(),
-                $this->getIgnoreFiles());
+                $this->getIgnoreFiles(),
+                $this->getIgnoreMasks());
+
 
         Core::Output(INFO, count($this->views) . " Views Found.");
+
+
 
         // Process All Views
         foreach($this->views as $key => $view)
@@ -193,28 +204,39 @@ abstract class Project
             $view->Process();
         }
 
-        // Output Views
+        // Output Views (and add to sitemap)
         foreach($this->views as $key => $view)
         {
-
             $this->currentView = $this->views[$key];
-            $view->Generate();
+            $path = $view->Generate();
+
+            $sitemapPath = str_replace($this->BuildPath, "", $path);
+            $this->Sitemap->AddOutput($sitemapPath);;
+            if($this->currentView->getHeaders()->priority)
+            {
+                $this->Sitemap->SetPriority($sitemapPath, $this->currentView->getHeaders()->priority);
+            }
         }
+
+
+
+        $this->Sitemap->Output();
     }
 
     public function Deploy()
     {
 
         Core::Output(INFO, "Deploying Site ...");
+
         // Get Build Files
-        $buildFiles = $this->GetFileList($this->BuildPath, $this->getIgnoreFiles());
+        $buildFiles = $this->GetFileList($this->BuildPath, $this->getIgnoreFiles(), $this->getIgnoreMasks());
         for($i = 0; $i < count($buildFiles); $i++)
         {
             $buildFiles[$i] = str_replace($this->BuildPath, "", $buildFiles[$i]);
         }
 
         // Get "Current" Output Files
-        $outputFiles = $this->GetFileList($this->OutputPath, $this->getIgnoreFiles());
+        $outputFiles = $this->GetFileList($this->OutputPath, $this->getIgnoreFiles(), $this->getIgnoreMasks());
         for($i = 0; $i < count($outputFiles); $i++)
         {
             $outputFiles[$i] = str_replace($this->OutputPath, "", $outputFiles[$i]);
@@ -263,14 +285,14 @@ abstract class Project
         }
     }
 
-    private function GetFileList($source, $ignoreFiles)
+    private function GetFileList($source, $ignoreFiles, $ignoreMasks)
     {
         $files = array();
 
          // Check for symlinks
         if (is_link($source)) {
             // No support for symlinks
-            $files = array_merge($files, $this->GetFilesList(symlink(readlink($source)), $ignoreFiles));
+            $files = array_merge($files, $this->GetFilesList(symlink(readlink($source)), $ignoreFiles, $ignoreMasks));
         }
 
         // If it truly is a file
@@ -288,11 +310,11 @@ abstract class Project
             while (false !== $entry = $dir->read())
             {
                 // Skip pointers
-                if ($entry == '.' || $entry == '..' || in_array($entry, $ignoreFiles)) {
+                if ($entry == '.' || $entry == '..' || in_array($entry, $ignoreFiles) || \StringHelper::MaskCheck($entry, $ignoreMasks)) {
                     continue;
                 }
 
-                $files = array_merge($files, $this->GetFileList("$source/$entry", $ignoreFiles));
+                $files = array_merge($files, $this->GetFileList("$source/$entry", $ignoreFiles, $ignoreMasks));
             }
         }
 
@@ -300,7 +322,7 @@ abstract class Project
     }
 
 
-    private function FindViews($source, $ignoreFiles)
+    private function FindViews($source, $ignoreFiles, $ignoreMasks)
     {
          // Check for symlinks
         if (is_link($source)) {
@@ -330,13 +352,13 @@ abstract class Project
             while (false !== $entry = $dir->read())
             {
                 // Skip pointers
-                if ($entry == '.' || $entry == '..' || in_array($entry, $ignoreFiles))
+                if ($entry == '.' || $entry == '..' || in_array($entry, $ignoreFiles) || \StringHelper::MaskCheck($entry, $ignoreMasks))
                 {
                     continue;
                 }
 
                 // Deep copy directories
-                $this->FindViews("$source/$entry", $ignoreFiles);
+                $this->FindViews("$source/$entry", $ignoreFiles, $ignoreMasks);
             }
 
             // Clean up
@@ -347,7 +369,7 @@ abstract class Project
     }
 
 
-    private function ProcessSiteFolder($source, $dest, $folderPermissions, $filePermissions, $ignoreFiles = null)
+    private function ProcessSiteFolder($source, $dest, $folderPermissions, $filePermissions, $ignoreFiles = null, $ignoreMasks = null)
     {
 
          // Check for symlinks
@@ -411,12 +433,12 @@ abstract class Project
         $dir = dir($source);
         while (false !== $entry = $dir->read()) {
             // Skip pointers
-            if ($entry == '.' || $entry == '..' || in_array($entry, $ignoreFiles)) {
+            if ($entry == '.' || $entry == '..' || in_array($entry, $ignoreFiles) || \StringHelper::MaskCheck($entry, $ignoreMasks)) {
                 continue;
             }
 
             // Deep copy directories
-            $this->ProcessSiteFolder("$source/$entry", "$dest/$entry", $folderPermissions, $filePermissions, $ignoreFiles);
+            $this->ProcessSiteFolder("$source/$entry", "$dest/$entry", $folderPermissions, $filePermissions, $ignoreFiles, $ignoreMasks);
         }
 
         // Clean up
@@ -614,6 +636,9 @@ abstract class Project
     {
         return $this->ignoreFiles;
     }
+    public function getIgnoreMasks() {
+        return $this->ignoreMasks;
+    }
 
     public function getRemoveExtraDeployFiles()
     {
@@ -629,6 +654,12 @@ abstract class Project
     {
         if ( !in_array($filename, $this->ignoreFiles) ) {
             $this->ignoreFiles[] = $filename;
+        }
+    }
+    public function AddIgnoreMask($mask)
+    {
+        if (!in_array($mask, $this->ignoreMasks) ) {
+            $this->ignoreMasks[] = $mask;
         }
     }
 

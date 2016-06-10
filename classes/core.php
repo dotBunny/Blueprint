@@ -112,6 +112,7 @@ class Core
         }
         else
         {
+            $this->LoadHelpers();
             // Load Classes
             $this->LoadClasses();
 
@@ -137,14 +138,15 @@ class Core
         return join(DIRECTORY_SEPARATOR, func_get_args($segments));
     }
 
-    public static function GetFiles($directory, $ignoreFiles = null)
+    public static function GetFiles($directory, $ignoreFiles = null, $ignoreMasks = null)
     {
         if ( !is_dir($directory) ) return false;
         $items =new \RecursiveDirectoryIterator($directory);
 
         $files = array();
         foreach (new \RecursiveIteratorIterator($items) as $filename =>$current) {
-            if (!is_dir($filename) && !in_array($current->GetFileName(), $ignoreFiles))
+
+            if (!is_dir($filename) && !in_array($current->GetFileName(), $ignoreFiles) && !\StringHelper::MaskCheck($filename, $ignoreMasks))
             {
                 $files[] = $filename;
             }
@@ -288,6 +290,10 @@ class Core
 
     }
 
+    private function LoadHelpers()
+    {
+        require_once(Core::BuildPath($this->rootDirectory, "helpers", "string.php"));
+    }
     private function LoadClasses()
     {
         Core::Output(MESSAGE, "Loading Classes ...");
@@ -298,6 +304,7 @@ class Core
         require_once(Core::BuildPath($this->rootDirectory, "classes", "template.php"));
         require_once(Core::BuildPath($this->rootDirectory, "classes", "view.php"));
         require_once(Core::BuildPath($this->rootDirectory, "classes", "parser.php"));
+        require_once(Core::BuildPath($this->rootDirectory, "classes", "sitemap.php"));
     }
 
     private function LoadParsers()
@@ -382,3 +389,6 @@ class Core
 
 
  }
+
+
+

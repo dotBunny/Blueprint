@@ -119,14 +119,13 @@ class View extends Template
             return $this->output;
         }
     }
-
-
-
-
+    public function getContentBase()
+    {
+        return $this->getHeaders()->base;
+    }
 
     public function Generate()
     {
-
         if ( $this->header->destination != null) {
             // Take relative add destination
             Core::Output(INFO, "Using Custom Destination " . $this->header->destination . " with " . $this->name);
@@ -180,6 +179,8 @@ class View extends Template
 
         // Final write of file
         file_put_contents($buildPath, $fileArray);
+
+        return $buildPath;
     }
 
     public function getName()

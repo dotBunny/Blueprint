@@ -4,6 +4,8 @@ namespace Blueprint;
 
 define(__NAMESPACE__ ."\TAG_END", "-->");
 define(__NAMESPACE__ ."\TAG_START", "<!-- ");
+define(__NAMESPACE__ ."\TAG_REPLACE_SPACE", "[[[SPACE]]]");
+define(__NAMESPACE__ ."\TAG_REPLACE_SPACE_LENGTH", strlen(TAG_REPLACE_SPACE));
 
 define(__NAMESPACE__ ."\TAG_BLUEPRINT", "BLUEPRINT");
 define(__NAMESPACE__ ."\TAG_TEMPLATE_START", "START");
@@ -32,7 +34,73 @@ class Tag
 
     	$this->baseContent = $contents;
 
+
+        // Before we explode based on a space, we need to find spaces inside of quotes and replace them
+        $quoteCount = substr_count($contents, '"');
+        if ( ($quoteCount % 2) == 0)
+        {
+
+
+            $openQuote = false;
+            $openQuoteIndex = 0;
+            $lastQuoteIndex = 0;
+            $foundQuote = true;
+            while($foundQuote)
+            {
+                $positionOfQuote = strpos($contents, '"', $lastQuoteIndex);
+
+                if ($positionOfQuote !== false) {
+
+                    $foundQuote = true;
+
+
+                   if ( !$openQuote )
+                   {
+                       $openQuoteIndex = $positionOfQuote;
+                       $openQuote = true;
+                       $lastQuoteIndex = $positionOfQuote + 1;
+                   }
+                   else
+                   {
+                       // closing quote
+                       $openQuote = false;
+
+
+                       // Replace String Based On Index
+                       $spaceCount = substr_count(substr($contents, $openQuoteIndex, $positionOfQuote - $openQuoteIndex), ' ');
+
+
+                       $contents =  substr($contents, 0, $openQuoteIndex) .
+                                    str_replace(" ", TAG_REPLACE_SPACE ,substr($contents, $openQuoteIndex, $positionOfQuote - $openQuoteIndex)) .
+                                    substr($contents, $positionOfQuote);
+
+                        $lastQuoteIndex = $positionOfQuote + (($spaceCount * TAG_REPLACE_SPACE_LENGTH) - $spaceCount) + 1;
+
+                   }
+
+
+
+                }
+                else
+                {
+                    $foundQuote = false;
+                }
+            }
+        }
+        else
+        {
+            Core::Output(ERROR, "Uneven number of quotes in tag: " . $contents);
+        }
+
         $exploded = explode(" ", $contents);
+
+        // Put the spaces back into the mix
+        for($i = 0; $i < count($exploded); $i++)
+        {
+            $exploded[$i] = str_replace(TAG_REPLACE_SPACE, " ",  $exploded[$i]);
+        }
+
+
         $this->keyword = strtoupper($exploded[0]);
         unset($exploded[0]);
 

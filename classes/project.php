@@ -211,10 +211,12 @@ abstract class Project
             $path = $view->Generate();
 
             $sitemapPath = str_replace($this->BuildPath, "", $path);
-            $this->Sitemap->AddOutput($sitemapPath);;
-            if($this->currentView->getHeaders()->priority)
-            {
-                $this->Sitemap->SetPriority($sitemapPath, $this->currentView->getHeaders()->priority);
+            if ( $this->currentView->getHeaders()->sitemap != "hide") {
+	            $this->Sitemap->AddOutput($sitemapPath);
+	            if($this->currentView->getHeaders()->priority)
+	            {
+	                $this->Sitemap->SetPriority($sitemapPath, $this->currentView->getHeaders()->priority);
+	            }
             }
         }
 

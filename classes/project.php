@@ -401,7 +401,8 @@ abstract class Project
 			{
 
 				// Copy / Return the already minimized versions of libraries
-				if ( strpos($source, ".min.") !== false || strpos($source, "-min.") ) {
+				if ( strpos($source, ".min.") || strpos($source, "-min.") ) {
+					Core::Output(INFO, "Not Compressing " . $source);
 					return copy($source, $dest);
 				}
 

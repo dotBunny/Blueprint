@@ -57,7 +57,7 @@ class Sitemap
             $cleanedPath = rtrim($outputPath, "index.html");
             $data .=
             "<url>
-                <loc>" . $basePath . $cleanedPath . "</loc>
+                <loc>" . $this->baseURI . $basePath . $cleanedPath . "</loc>
                 <lastmod>" . $item["LastModified"] . "</lastmod>
                 <changefreq>" . $item["ChangeFrequency"] . "</changefreq>
                 <priority>" . $item["Priority"] . "</priority>
